@@ -11,4 +11,4 @@ FROM alpine:latest
 RUN mkdir /app
 WORKDIR /app
 COPY --from=builder /app/app .
-ENTRYPOINT ["./app serve"]
+ENTRYPOINT ["./app","serve"]
