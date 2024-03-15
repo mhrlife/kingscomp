@@ -15,6 +15,7 @@ type CommonBehaviour[T entity.Entity] interface {
 	Save(ctx context.Context, ent entity.Entity) error
 }
 
+//go:generate mockery --name AccountRepository
 type AccountRepository interface {
 	CommonBehaviour[entity.Account]
 }
