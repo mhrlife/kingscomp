@@ -19,3 +19,8 @@ type CommonBehaviour[T entity.Entity] interface {
 type AccountRepository interface {
 	CommonBehaviour[entity.Account]
 }
+
+//go:generate mockery --name LobbyRepository
+type LobbyRepository interface {
+	CommonBehaviour[entity.Lobby]
+}
