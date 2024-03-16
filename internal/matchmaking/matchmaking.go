@@ -22,22 +22,22 @@ var (
 //go:embed matchmaking.lua
 var matchmakingScript string
 
-type MatchMaking interface {
+type Matchmaking interface {
 	Join(ctx context.Context, userId int64, timeout time.Duration) (entity.Lobby, bool, error)
 	Leave(ctx context.Context, userId int64) error
 }
 
-var _ MatchMaking = &RedisMatchMaking{}
+var _ Matchmaking = &RedisMatchmaking{}
 
-type RedisMatchMaking struct {
+type RedisMatchmaking struct {
 	client            rueidis.Client
 	matchMakingScript *rueidis.Lua
 	lobby             repository.LobbyRepository
 }
 
-func NewRedisMatchMaking(client rueidis.Client, lobby repository.LobbyRepository) *RedisMatchMaking {
+func NewRedisMatchmaking(client rueidis.Client, lobby repository.LobbyRepository) *RedisMatchmaking {
 	script := rueidis.NewLuaScript(matchmakingScript)
-	return &RedisMatchMaking{
+	return &RedisMatchmaking{
 		client:            client,
 		matchMakingScript: script,
 		lobby:             lobby,
@@ -49,7 +49,7 @@ type joinLobbyPubSubResponse struct {
 	lobbyId string
 }
 
-func (r RedisMatchMaking) Join(ctx context.Context, userId int64, timeout time.Duration) (entity.Lobby, bool, error) {
+func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.Duration) (entity.Lobby, bool, error) {
 	resp, err := r.matchMakingScript.Exec(ctx, r.client,
 		[]string{"matchmaking", "matchmaking"},
 		[]string{"4",
@@ -87,7 +87,7 @@ func (r RedisMatchMaking) Join(ctx context.Context, userId int64, timeout time.D
 	return entity.Lobby{}, false, ErrBadRedisResponse
 }
 
-func (r RedisMatchMaking) Leave(ctx context.Context, userId int64) error {
+func (r RedisMatchmaking) Leave(ctx context.Context, userId int64) error {
 	//TODO implement me
 	panic("implement me")
 }

@@ -19,7 +19,7 @@ func TestMatchmaking_Join(t *testing.T) {
 	timeout := time.Second * 10
 	redisClient, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", redisPort))
 	assert.NoError(t, err)
-	mm := matchmaking.NewRedisMatchMaking(redisClient, repository.NewLobbyRedisRepository(redisClient))
+	mm := matchmaking.NewRedisMatchmaking(redisClient, repository.NewLobbyRedisRepository(redisClient))
 
 	var wg sync.WaitGroup
 	testJoin := func(id int64) {
@@ -73,7 +73,7 @@ func TestMatchmaking_JoinWithManyLobbies(t *testing.T) {
 	assert.NoError(t, err)
 	lobbyRepository := repository.NewLobbyRedisRepository(redisClient)
 	accRepository := repository.NewAccountRedisRepository(redisClient)
-	mm := matchmaking.NewRedisMatchMaking(redisClient, lobbyRepository)
+	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository)
 
 	for i := 0; i < 100; i++ {
 		accRepository.Save(context.Background(), entity.Account{
