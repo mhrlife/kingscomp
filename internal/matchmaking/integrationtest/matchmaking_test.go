@@ -20,6 +20,7 @@ func TestMatchmaking_Join(t *testing.T) {
 	redisClient, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", redisPort))
 	assert.NoError(t, err)
 	mm := matchmaking.NewRedisMatchmaking(redisClient, repository.NewLobbyRedisRepository(redisClient))
+	defer flushAll(t, redisClient)
 
 	var wg sync.WaitGroup
 	testJoin := func(id int64) {
@@ -27,7 +28,7 @@ func TestMatchmaking_Join(t *testing.T) {
 		go func() {
 			lobby, _, err := mm.Join(ctx, id, timeout)
 			assert.NoError(t, err)
-			assert.NotEqual(t, "", lobby)
+			assert.NotEqual(t, "", lobby.ID)
 			wg.Done()
 		}()
 	}
@@ -45,6 +46,32 @@ func TestMatchmaking_Join(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, "", lobby.ID)
 	wg.Wait()
+}
+
+func TestMatchmaking_JoinTimeout(t *testing.T) {
+	ctx := context.Background()
+	timeout := time.Millisecond * 100
+	redisClient, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", redisPort))
+	assert.NoError(t, err)
+	mm := matchmaking.NewRedisMatchmaking(redisClient, repository.NewLobbyRedisRepository(redisClient))
+	defer flushAll(t, redisClient)
+
+	var wg sync.WaitGroup
+	testJoin := func(id int64) {
+		wg.Add(1)
+		go func() {
+			lobby, _, err := mm.Join(ctx, id, timeout)
+			assert.ErrorIs(t, err, matchmaking.ErrTimeout)
+			assert.Equal(t, "", lobby.ID)
+			wg.Done()
+		}()
+	}
+
+	testJoin(10)
+
+	<-time.After(time.Millisecond * 500)
+
+	assert.Equal(t, int64(0), zCount(t, redisClient, "matchmaking"))
 }
 
 type CCounter[T comparable] struct {
@@ -74,6 +101,7 @@ func TestMatchmaking_JoinWithManyLobbies(t *testing.T) {
 	lobbyRepository := repository.NewLobbyRedisRepository(redisClient)
 	accRepository := repository.NewAccountRedisRepository(redisClient)
 	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository)
+	defer flushAll(t, redisClient)
 
 	for i := 0; i < 100; i++ {
 		accRepository.Save(context.Background(), entity.Account{
@@ -88,30 +116,29 @@ func TestMatchmaking_JoinWithManyLobbies(t *testing.T) {
 	testJoin := func(id int64) {
 		wg.Add(1)
 		go func() {
-			lobby, created, err := mm.Join(ctx, id, timeout)
+			lobby, _, err := mm.Join(ctx, id, timeout)
 			assert.NoError(t, err)
-			if created {
-				counter.Incr(lobby.ID)
-			}
+			counter.Incr(lobby.ID)
 			wg.Done()
 		}()
 	}
 
 	s := time.Now()
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < matchmaking.MaxLobbyMembers*1000; i++ {
 		testJoin(int64(i) + 1)
 	}
 
 	wg.Wait()
 	fmt.Println("Took", time.Since(s))
 
-	assert.Len(t, counter.counter, 200)
+	assert.Len(t, counter.counter, 1000)
 
 	// each lobby must have only 5 users
-	for lobbyId, _ := range counter.counter {
+	for lobbyId, count := range counter.counter {
 		lobby, err := lobbyRepository.Get(context.Background(), entity.NewID("lobby", lobbyId))
 		assert.NoError(t, err)
 		assert.Len(t, lobby.Participants, 5)
+		assert.Equal(t, count, matchmaking.MaxLobbyMembers)
 		for _, participant := range lobby.Participants {
 			uCounter.Incr(participant)
 		}
@@ -142,4 +169,8 @@ func keys(t *testing.T, redisClient rueidis.Client, pattern string) []string {
 	).AsStrSlice()
 	assert.NoError(t, err)
 	return keys
+}
+
+func flushAll(t *testing.T, c rueidis.Client) {
+	assert.NoError(t, c.Do(context.Background(), c.B().Flushall().Build()).Error())
 }
