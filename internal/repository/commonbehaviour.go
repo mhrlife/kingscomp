@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/redis/rueidis"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
 	"kingscomp/pkg/jsonhelper"
@@ -37,7 +38,7 @@ func (r RedisCommonBehaviour[T]) Get(ctx context.Context, id entity.ID) (T, erro
 	return jsonhelper.Decode[T]([]byte(val)), nil
 }
 
-func (r RedisCommonBehaviour[T]) Save(ctx context.Context, ent entity.Entity) error {
+func (r RedisCommonBehaviour[T]) Save(ctx context.Context, ent T) error {
 	cmd := r.client.B().JsonSet().Key(ent.EntityID().String()).
 		Path("$").Value(string(jsonhelper.Encode(ent))).Build()
 	if err := r.client.Do(ctx, cmd).Error(); err != nil {
@@ -45,4 +46,25 @@ func (r RedisCommonBehaviour[T]) Save(ctx context.Context, ent entity.Entity) er
 		return err
 	}
 	return nil
+}
+
+func (r RedisCommonBehaviour[T]) MGet(ctx context.Context, ids ...entity.ID) ([]T, error) {
+	cmd := r.client.B().JsonMget().Key(lo.Map(ids, func(item entity.ID, _ int) string {
+		return item.String()
+	})...).Path(".").Build()
+	val, err := r.client.Do(ctx, cmd).AsStrSlice()
+	if err != nil {
+		// handle redis nil error
+		if errors.Is(err, rueidis.Nil) {
+			return nil, ErrNotFound
+		}
+		logrus.WithError(err).WithField("ids", ids).Errorln("couldn't retrieve many from Redis")
+		return nil, err
+	}
+
+	return lo.Map(lo.Filter(val, func(item string, _ int) bool {
+		return item != ""
+	}), func(item string, _ int) T {
+		return jsonhelper.Decode[T]([]byte(item))
+	}), nil
 }

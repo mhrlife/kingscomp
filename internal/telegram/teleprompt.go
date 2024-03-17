@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/samber/lo"
 	"gopkg.in/telebot.v3"
+	"kingscomp/internal/telegram/teleprompt"
 )
 
 var (
@@ -38,14 +39,17 @@ getInput:
 		}
 	}
 	// waits for the client until the response is fetched
-	response, isTimeout := t.TelePrompt.AsMessage(c.Sender().ID, DefaultInputTimeout)
-	if isTimeout {
-		if config.OnTimeout != nil {
-			c.Send(config.OnTimeout)
-		} else {
-			c.Send(DefaultTimeoutText)
+	response, err := t.TelePrompt.AsMessage(c.Sender().ID, DefaultInputTimeout)
+	if err != nil {
+		if errors.Is(err, teleprompt.ErrTimeout) {
+			if config.OnTimeout != nil {
+				c.Send(config.OnTimeout)
+			} else {
+				c.Send(DefaultTimeoutText)
+			}
+			return nil, ErrInputTimeout
 		}
-		return nil, ErrInputTimeout
+		return nil, err
 	}
 
 	// validate the response

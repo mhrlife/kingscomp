@@ -12,6 +12,8 @@ func (t *Telegram) setupHandlers() {
 	t.bot.Handle("/start", t.start)
 	t.bot.Handle(telebot.OnText, t.textHandler)
 	t.bot.Handle(&btnEditDisplayName, t.editDisplayName)
+	t.bot.Handle(&btnJoinMatchmaking, t.joinMatchmaking)
+	t.bot.Handle(&btnCurrentMatch, t.currentLobby)
 }
 
 func (t *Telegram) textHandler(c telebot.Context) error {
@@ -19,6 +21,5 @@ func (t *Telegram) textHandler(c telebot.Context) error {
 		return nil
 	}
 
-	/// per state
-	return c.Reply("I didn't understand")
+	return t.myInfo(c)
 }

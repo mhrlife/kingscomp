@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/telebot.v3"
 	"kingscomp/internal/entity"
+	"kingscomp/internal/telegram/teleprompt"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func (t *Telegram) registerMiddleware(next telebot.HandlerFunc) telebot.HandlerF
 }
 
 func (t *Telegram) onError(err error, c telebot.Context) {
-	if errors.Is(err, ErrInputTimeout) {
+	if errors.Is(err, ErrInputTimeout) || errors.Is(err, teleprompt.ErrIsCanceled) {
 		return
 	}
 

@@ -12,7 +12,8 @@ var (
 
 type CommonBehaviour[T entity.Entity] interface {
 	Get(ctx context.Context, id entity.ID) (T, error)
-	Save(ctx context.Context, ent entity.Entity) error
+	Save(ctx context.Context, ent T) error
+	MGet(ctx context.Context, ids ...entity.ID) ([]T, error)
 }
 
 //go:generate mockery --name AccountRepository

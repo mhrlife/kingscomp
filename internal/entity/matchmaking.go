@@ -5,7 +5,8 @@ type Lobby struct {
 	Participants  []int64 `json:"participants"`
 	CreatedAtUnix int64   `json:"created_at"`
 
-	State string `json:"state"`
+	Resigned []int64 `json:"resigned"`
+	State    string  `json:"state"`
 }
 
 func (l Lobby) EntityID() ID {

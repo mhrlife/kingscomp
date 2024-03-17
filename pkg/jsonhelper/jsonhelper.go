@@ -17,7 +17,7 @@ func Decode[T any](b []byte) T {
 	var t T
 	err := json.Unmarshal(b, &t)
 	if err != nil {
-		logrus.WithError(err).WithField("t", t).Fatalln("couldn't decode the variable")
+		logrus.WithError(err).WithField("t", t).WithField("val", string(b)).Fatalln("couldn't decode the variable")
 	}
 	return t
 }

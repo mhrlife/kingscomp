@@ -2,13 +2,16 @@ package telegram
 
 import (
 	"gopkg.in/telebot.v3"
+	"kingscomp/internal/config"
 	"kingscomp/internal/entity"
 	"time"
 )
 
 var (
-	DefaultInputTimeout = time.Minute * 5
-	DefaultTimeoutText  = `🕗 منتظر پیامت بودیم چیزی ارسال نکردی. لطفا هر وقت برگشتی دوباره پیام بده.`
+	DefaultMatchmakingTimeout         = time.Second * 10
+	DefaultMatchmakingLoadingInterval = DefaultMatchmakingTimeout / 10 //todo: increase in the production
+	DefaultInputTimeout               = time.Minute * 5
+	DefaultTimeoutText                = `🕗 منتظر پیامت بودیم چیزی ارسال نکردی. لطفا هر وقت برگشتی دوباره پیام بده.`
 
 	TxtConfirm = `✅ بله`
 	TxtDecline = `✖ خیر`
@@ -21,4 +24,14 @@ func GetAccount(c telebot.Context) entity.Account {
 var (
 	selector           = &telebot.ReplyMarkup{}
 	btnEditDisplayName = selector.Data("📝 ویرایش نام‌نمایشی", "btnEditDisplayName")
+	btnJoinMatchmaking = selector.Data("🎮 شروع بازی جدید", "btnJoinMatchmaking")
+	btnCurrentMatch    = selector.Data("🎲 بازی در حال اجرای من", "btnCurrentMatch")
+	btnResignLobby     = selector.Data("🏳 تسلیم شدن", "btnResignLobby")
+	btnStartGameWebApp = selector.Data("🎮 باز کردن بازی", "btnStartGameWebApp")
 )
+
+func NewStartWebAppGame(lobbyId string) telebot.Btn {
+	return selector.WebApp("🎮 باز کردن بازی", &telebot.WebApp{
+		URL: config.Default.WebAppAddr + "/lobby/" + lobbyId,
+	})
+}

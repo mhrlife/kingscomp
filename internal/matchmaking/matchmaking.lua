@@ -16,16 +16,19 @@ local function matchUsers(queueKey, pubSubChannel, minUsers, minScore, lobbyId, 
             id = lobbyId,
             participants = users,
             created_at = userScore,
-            state = 'started'
+            state = 'created',
+            resigned = {},
         }
         local lobbyJson = cjson.encode(lobby)
         redis.call('JSON.SET', 'lobby:' .. lobbyId, '.', lobbyJson)
         -- Notify the matched users via Pub/Sub channel
-         for i, v in ipairs(users) do
-            local listKey = 'matchmaking:' .. v
-            redis.call('RPUSH', listKey, lobbyId)
-            redis.call('EXPIRE', listKey, 120)
-         end
+        for i, v in ipairs(users) do
+            if v ~= userId then
+                local listKey = 'matchmaking:' .. v
+                redis.call('RPUSH', listKey, lobbyId)
+                redis.call('EXPIRE', listKey, 120)
+            end
+        end
         -- todo: create the lobby
         return { true, lobbyId, users } -- Matching succeeded
     else
