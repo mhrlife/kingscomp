@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/ory/dockertest/v3"
 	"kingscomp/internal/repository/redis"
-	"kingscomp/pkg/testhelper"
+	"kingscomp/pkg/helpers"
 	"os"
 	"testing"
 )
@@ -12,14 +12,14 @@ import (
 var redisPort string
 
 func TestMain(m *testing.M) {
-	if !testhelper.IsIntegration() {
+	if !helpers.IsIntegration() {
 		return
 	}
 
-	pool := testhelper.StartDockerPool()
+	pool := helpers.StartDockerPool()
 
 	// set up the redis container for tests
-	redisRes := testhelper.StartDockerInstance(pool, "redis/redis-stack-server", "latest",
+	redisRes := helpers.StartDockerInstance(pool, "redis/redis-stack-server", "latest",
 		func(res *dockertest.Resource) error {
 			port := res.GetPort("6379/tcp")
 			_, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", port))

@@ -6,7 +6,7 @@ import (
 	"github.com/redis/rueidis"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
-	"kingscomp/pkg/jsonhelper"
+	"kingscomp/pkg/helpers"
 )
 
 var _ CommonBehaviour[entity.Entity] = &RedisCommonBehaviour[entity.Entity]{}
@@ -34,12 +34,12 @@ func (r RedisCommonBehaviour[T]) Get(ctx context.Context, id entity.ID) (T, erro
 		return t, err
 	}
 
-	return jsonhelper.Decode[T]([]byte(val)), nil
+	return helpers.Decode[T]([]byte(val)), nil
 }
 
 func (r RedisCommonBehaviour[T]) Save(ctx context.Context, ent entity.Entity) error {
 	cmd := r.client.B().JsonSet().Key(ent.EntityID().String()).
-		Path("$").Value(string(jsonhelper.Encode(ent))).Build()
+		Path("$").Value(string(helpers.Encode(ent))).Build()
 	if err := r.client.Do(ctx, cmd).Error(); err != nil {
 		logrus.WithError(err).WithField("ent", ent).Errorln("couldn't save the entity")
 		return err

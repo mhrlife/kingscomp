@@ -1,4 +1,4 @@
-package testhelper
+package helpers
 
 import (
 	"github.com/ory/dockertest/v3"
