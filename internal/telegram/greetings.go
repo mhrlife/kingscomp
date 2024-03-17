@@ -22,7 +22,7 @@ func (t *Telegram) myInfo(c telebot.Context) error {
 	account := GetAccount(c)
 	selector := &telebot.ReplyMarkup{}
 	selector.Inline(selector.Row(btnEditDisplayName))
-	return c.Send(fmt.Sprintf(`🏰 پادشان «%s»
+	return c.Send(fmt.Sprintf(`🏰 پادشاه «%s»
 به بازی نبرد پادشاهان خوش آمدی.
 
 چه کاری میتونم برات انجام بدم؟`, account.DisplayName), selector)
