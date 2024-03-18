@@ -9,3 +9,7 @@ serve:
 dev:
 	templ generate
 	go run main.go serve
+
+
+generate:
+	templ generate
