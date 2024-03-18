@@ -24,7 +24,7 @@ func (a *App) LobbyParticipants(ctx context.Context, lobbyId string) (entity.Lob
 		return entity.Lobby{}, nil, err
 	}
 
-	accounts, err := a.Account.Account.MGet(ctx,
+	accounts, err := a.Account.MGet(ctx,
 		lo.Map(lobby.Participants, func(item int64, _ int) entity.ID {
 			return entity.NewID("account", item)
 		})...,

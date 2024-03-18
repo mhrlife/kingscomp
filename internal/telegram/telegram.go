@@ -45,3 +45,7 @@ func NewTelegram(app *service.App, mm matchmaking.Matchmaking, apiKey string) (*
 func (t *Telegram) Start() {
 	t.bot.Start()
 }
+
+func (t *Telegram) Shutdown() {
+	t.bot.Stop()
+}

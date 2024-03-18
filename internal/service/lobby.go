@@ -5,9 +5,9 @@ import (
 )
 
 type LobbyService struct {
-	Lobby repository.LobbyRepository //todo: refactor, generic common behaviour implementation
+	repository.Lobby
 }
 
-func NewLobbyService(rep repository.LobbyRepository) *LobbyService {
+func NewLobbyService(rep repository.Lobby) *LobbyService {
 	return &LobbyService{Lobby: rep}
 }

@@ -5,7 +5,7 @@ import (
 	"kingscomp/internal/entity"
 )
 
-var _ AccountRepository = &AccountRedisRepository{}
+var _ Account = &AccountRedisRepository{}
 
 type AccountRedisRepository struct {
 	*RedisCommonBehaviour[entity.Account]

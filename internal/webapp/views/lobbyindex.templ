@@ -4,31 +4,13 @@ package views
 templ LobbyIndex(){
 @Template(){
 
-<h1>Hello World</h1>
-<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci dicta ipsum necessitatibus repudiandae sequi.
-    Architecto assumenda culpa deleniti doloremque eius eligendi, error id, ipsam nam sapiente sint tempore voluptas
-    voluptatibus.</p>
+<div class="center">
+    <h1>سلام دنیا</h1>
+    <p class="hint" style="margin-bottom: 10px">در اینجا بزودی یک بازی قرار میگیرد!</p>
+    <button class="tg-button">یک دکمه پیشنهادی</button>
+</div>
 
 <script>
-    (async () => {
-        let response = await fetch("/auth/validate", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                initData: window.Telegram.WebApp.initData
-            })
-        })
-
-        response = await response.json()
-        if (!response["data"]["is_valid"]) {
-            alert("data is not valid")
-            return
-        }
-
-        alert(JSON.stringify(window.Telegram.WebApp.initDataUnsafe))
-    })()
 </script>
 }
 }

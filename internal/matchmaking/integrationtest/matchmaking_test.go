@@ -33,14 +33,13 @@ func TestMatchmaking_Join(t *testing.T) {
 		}()
 	}
 
-	testJoin(10)
-	testJoin(11)
-	testJoin(12)
-	testJoin(13)
+	for i := 0; i < matchmaking.MaxLobbyMembers-1; i++ {
+		testJoin(int64(10 + i))
+	}
 
 	<-time.After(time.Millisecond * 500)
 
-	assert.Equal(t, int64(4), zCount(t, redisClient, "matchmaking"))
+	assert.Equal(t, int64(matchmaking.MaxLobbyMembers-1), zCount(t, redisClient, "matchmaking"))
 
 	lobby, _, err := mm.Join(ctx, 14, timeout)
 	assert.NoError(t, err)
@@ -137,7 +136,7 @@ func TestMatchmaking_JoinWithManyLobbies(t *testing.T) {
 	for lobbyId, count := range counter.counter {
 		lobby, err := lobbyRepository.Get(context.Background(), entity.NewID("lobby", lobbyId))
 		assert.NoError(t, err)
-		assert.Len(t, lobby.Participants, 5)
+		assert.Len(t, lobby.Participants, matchmaking.MaxLobbyMembers)
 		assert.Equal(t, count, matchmaking.MaxLobbyMembers)
 		for _, participant := range lobby.Participants {
 			uCounter.Incr(participant)

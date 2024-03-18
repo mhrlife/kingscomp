@@ -16,8 +16,7 @@ local function matchUsers(queueKey, pubSubChannel, minUsers, minScore, lobbyId, 
             id = lobbyId,
             participants = users,
             created_at = userScore,
-            state = 'created',
-            resigned = {},
+            state = 'created'
         }
         local lobbyJson = cjson.encode(lobby)
         redis.call('JSON.SET', 'lobby:' .. lobbyId, '.', lobbyJson)

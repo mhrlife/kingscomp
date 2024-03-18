@@ -29,7 +29,7 @@ func LobbyIndex() templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<h1>Hello World</h1><p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Adipisci dicta ipsum necessitatibus repudiandae sequi.\r Architecto assumenda culpa deleniti doloremque eius eligendi, error id, ipsam nam sapiente sint tempore voluptas\r voluptatibus.</p><script>\r\n    (async () => {\r\n        let response = await fetch(\"/auth/validate\", {\r\n            method: \"POST\",\r\n            headers: {\r\n                \"Content-Type\": \"application/json\"\r\n            },\r\n            body: JSON.stringify({\r\n                initData: window.Telegram.WebApp.initData\r\n            })\r\n        })\r\n\r\n        response = await response.json()\r\n        if (!response[\"data\"][\"is_valid\"]) {\r\n            alert(\"data is not valid\")\r\n            return\r\n        }\r\n\r\n        alert(JSON.stringify(window.Telegram.WebApp.initDataUnsafe))\r\n    })()\r\n</script>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"center\"><h1>سلام دنیا</h1><p class=\"hint\" style=\"margin-bottom: 10px\">در اینجا بزودی یک بازی قرار میگیرد!</p><button class=\"tg-button\">یک دکمه پیشنهادی</button></div><script>\r\n</script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -16,12 +16,12 @@ type CommonBehaviour[T entity.Entity] interface {
 	MGet(ctx context.Context, ids ...entity.ID) ([]T, error)
 }
 
-//go:generate mockery --name AccountRepository
-type AccountRepository interface {
+//go:generate mockery --name Account
+type Account interface {
 	CommonBehaviour[entity.Account]
 }
 
-//go:generate mockery --name LobbyRepository
-type LobbyRepository interface {
+//go:generate mockery --name Lobby
+type Lobby interface {
 	CommonBehaviour[entity.Lobby]
 }

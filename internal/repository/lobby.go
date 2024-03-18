@@ -5,7 +5,7 @@ import (
 	"kingscomp/internal/entity"
 )
 
-var _ LobbyRepository = &LobbyRedisRepository{}
+var _ Lobby = &LobbyRedisRepository{}
 
 type LobbyRedisRepository struct {
 	*RedisCommonBehaviour[entity.Lobby]

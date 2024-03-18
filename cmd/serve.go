@@ -15,6 +15,8 @@ import (
 	"kingscomp/internal/telegram"
 	"kingscomp/internal/webapp"
 	"os"
+	"os/signal"
+	"time"
 )
 
 // serveCmd represents the serve command
@@ -50,22 +52,32 @@ func serve(_ *cobra.Command, _ []string) {
 
 	wa := webapp.NewWebApp(app, ":8080")
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	// use ngrok if its local
 	if os.Getenv("ENV") == "local" {
-		listener, err := ngrok.Listen(context.Background(),
-			ngrokconfig.HTTPEndpoint(),
+		listener, err := ngrok.Listen(ctx,
+			ngrokconfig.HTTPEndpoint(ngrokconfig.WithDomain(os.Getenv("NGROK_DOMAIN"))),
 			ngrok.WithAuthtokenFromEnv(),
 		)
 		if err != nil {
 			logrus.WithError(err).Fatalln("couldn't set up ngrok")
 		}
+		defer listener.Close()
 		config.Default.WebAppAddr = "https://" + listener.Addr().String()
 		logrus.WithField("ngrok_addr", config.Default.WebAppAddr).Info("local server is now online")
 		logrus.WithError(wa.StartDev(listener)).Errorln("http server error")
-		return
+	} else {
+		wa.Start()
 	}
 
-	wa.Start()
+	defer wa.Shutdown(context.Background())
+	defer tg.Shutdown()
+
+	<-ctx.Done()
+	logrus.Info("shutting down the server ... please wait ...")
+	<-time.After(time.Second)
 }
 
 func init() {

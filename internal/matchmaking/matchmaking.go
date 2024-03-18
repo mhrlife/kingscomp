@@ -32,10 +32,10 @@ var _ Matchmaking = &RedisMatchmaking{}
 type RedisMatchmaking struct {
 	client            rueidis.Client
 	matchMakingScript *rueidis.Lua
-	lobby             repository.LobbyRepository
+	lobby             repository.Lobby
 }
 
-func NewRedisMatchmaking(client rueidis.Client, lobby repository.LobbyRepository) *RedisMatchmaking {
+func NewRedisMatchmaking(client rueidis.Client, lobby repository.Lobby) *RedisMatchmaking {
 	script := rueidis.NewLuaScript(matchmakingScript)
 	return &RedisMatchmaking{
 		client:            client,
