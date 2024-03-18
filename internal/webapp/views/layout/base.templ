@@ -1,0 +1,143 @@
+package layout
+
+templ Base(){
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"/>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge"/>
+    <title>KingsComp</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="/static/fontiran.css"/>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            direction: rtl;
+        }
+
+        body {
+            --bg-color: var(--tg-theme-bg-color);
+            background-color: var(--bg-color);
+            font-family: Ravi NoEn, serif;
+            color: var(--tg-theme-text-color);
+            margin: 48px 24px;
+            padding: 0;
+            color-scheme: var(--tg-color-scheme);
+        }
+
+        a, button, p, div, h1, h2, h3, h4, h5, h6, b, strong, em {
+            font-family: Ravi NoEn, serif;
+        }
+
+        a {
+            color: var(--tg-theme-link-color);
+        }
+
+        .spinner {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: radial-gradient(farthest-side, var(--tg-theme-button-color) 94%, #0000) top/9px 9px no-repeat,
+            conic-gradient(#0000 30%, var(--tg-theme-button-color));
+            -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 9px), #000 0);
+            animation: spinner-aib1d7 1s infinite linear;
+        }
+
+        .hint {
+            color: var(--tg-theme-hint-color);
+        }
+
+        @keyframes spinner-aib1d7 {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .tg-button {
+            padding: 12px;
+            margin: 8px;
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border: none;
+            outline: none;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body x-data="{
+    theme: window.Telegram.WebApp.themeParams,
+    auth: 0, // 0 means validating, 1 means validate, 2 means invalid,
+}"
+      x-init='
+
+        let response = await post("/auth/validate")
+        if (!response["data"]["is_valid"]) {
+            auth = 2;
+            return
+        }
+
+        auth = 1;
+        WebApp.ready();
+        WebApp.expand();
+        WebApp.enableClosingConfirmation();
+
+
+
+'>
+<template x-if="auth === 0">
+    <div class="center">
+        <div>
+            <div class="spinner"></div>
+        </div>
+        <p class="hint">لطفا کمی صبر کنید</p>
+    </div>
+</template>
+
+<template x-if="auth === 1">
+    { children... }
+</template>
+
+<template x-if="auth === 2">
+    <div class="center">
+        <h2>مشکلی پیش آمده :(</h2>
+        <p>لطفا دوباره تلاش کنید یا به پشتیبانی اطلاع دهید</p>
+    </div>
+</template>
+
+<script>
+    const WebApp = window.Telegram.WebApp;
+
+    async function post(path, data = {}) {
+        let response = await fetch(path, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": WebApp.initData,
+            },
+            body: JSON.stringify(data)
+        })
+
+        response = await response.json()
+        console.log(response);
+        return response
+    }
+</script>
+</body>
+</html>
+}

@@ -6,6 +6,10 @@ test-integration:
 serve:
 	go run main.go serve
 
-dev:
-	templ generate
+dev:generate
 	go run main.go serve
+
+
+
+generate:
+	templ generate
