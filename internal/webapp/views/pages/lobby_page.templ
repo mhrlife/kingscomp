@@ -2,16 +2,16 @@ package pages
 
 import "kingscomp/internal/webapp/views/layout"
 
-templ LobbyPage(){
+
+templ LobbyPage(lobbyId string){
 @layout.Base(){
 
-<div class="center">
-    <h1>سلام دنیا</h1>
+<div class="center" x-init="
+ let readyResponse = await post('/lobby/'+$root.dataset.lobbyid+'/ready')
+" x-data="" data-lobbyid={lobbyId}>
     <p class="hint" style="margin-bottom: 10px">در اینجا بزودی یک بازی قرار میگیرد!</p>
     <button class="tg-button">یک دکمه پیشنهادی</button>
 </div>
 
-<script>
-</script>
 }
 }

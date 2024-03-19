@@ -14,6 +14,7 @@ func (t *Telegram) setupHandlers() {
 	t.bot.Handle(&btnEditDisplayName, t.editDisplayName)
 	t.bot.Handle(&btnJoinMatchmaking, t.joinMatchmaking)
 	t.bot.Handle(&btnCurrentMatch, t.currentLobby)
+	t.bot.Handle(&btnResignLobby, t.resignLobby)
 }
 
 func (t *Telegram) textHandler(c telebot.Context) error {

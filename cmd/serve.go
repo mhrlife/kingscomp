@@ -35,13 +35,14 @@ func serve(_ *cobra.Command, _ []string) {
 	}
 	accountRepository := repository.NewAccountRedisRepository(redisClient)
 	lobbyRepository := repository.NewLobbyRedisRepository(redisClient)
+	questionRepository := repository.NewQuestionRedisRepository(redisClient)
 	// set up app
 	app := service.NewApp(
 		service.NewAccountService(accountRepository),
 		service.NewLobbyService(lobbyRepository),
 	)
 
-	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository)
+	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository, questionRepository)
 
 	tg, err := telegram.NewTelegram(app, mm, os.Getenv("BOT_API"))
 	if err != nil {

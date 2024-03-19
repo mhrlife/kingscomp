@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/redis/rueidis"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
@@ -47,6 +48,15 @@ func (r RedisCommonBehaviour[T]) Save(ctx context.Context, ent T) error {
 	}
 	return nil
 }
+func (r RedisCommonBehaviour[T]) SetField(ctx context.Context, id entity.ID, fieldName string, value any) error {
+	cmd := r.client.B().JsonSet().Key(id.String()).
+		Path(fmt.Sprintf("$.%s", fieldName)).Value(string(jsonhelper.Encode(value))).Build()
+	if err := r.client.Do(ctx, cmd).Error(); err != nil {
+		logrus.WithError(err).WithField("ent", id).Errorln("couldn't update entity's field")
+		return err
+	}
+	return nil
+}
 
 func (r RedisCommonBehaviour[T]) MGet(ctx context.Context, ids ...entity.ID) ([]T, error) {
 	cmd := r.client.B().JsonMget().Key(lo.Map(ids, func(item entity.ID, _ int) string {
@@ -67,4 +77,26 @@ func (r RedisCommonBehaviour[T]) MGet(ctx context.Context, ids ...entity.ID) ([]
 	}), func(item string, _ int) T {
 		return jsonhelper.Decode[T]([]byte(item))
 	}), nil
+}
+
+func (r RedisCommonBehaviour[T]) MSet(ctx context.Context, ents ...T) error {
+	if len(ents) == 0 {
+		return nil
+	}
+	var cmd = r.client.B().JsonMset().
+		Key(ents[0].EntityID().String()).
+		Path(".").
+		Value(string(jsonhelper.Encode(ents[0])))
+	for i, ent := range ents {
+		if i == 0 {
+			continue
+		}
+		cmd = cmd.Key(ent.EntityID().String()).Path(".").Value(string(jsonhelper.Encode(ent)))
+	}
+	err := r.client.Do(ctx, cmd.Build()).Error()
+	if err != nil {
+		logrus.WithError(err).Errorln("couldn't save multi items")
+		return err
+	}
+	return nil
 }

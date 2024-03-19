@@ -11,24 +11,23 @@ local function matchUsers(queueKey, pubSubChannel, minUsers, minScore, lobbyId, 
         table.insert(users, userId)
         -- Remove these users from the sorted set
         redis.call('ZREM', queueKey, unpack(users))
-        -- Create a new lobby
-        local lobby = {
-            id = lobbyId,
-            participants = users,
-            created_at = userScore,
-            state = 'created'
-        }
-        local lobbyJson = cjson.encode(lobby)
-        redis.call('JSON.SET', 'lobby:' .. lobbyId, '.', lobbyJson)
-        -- Notify the matched users via Pub/Sub channel
-        for i, v in ipairs(users) do
-            if v ~= userId then
-                local listKey = 'matchmaking:' .. v
-                redis.call('RPUSH', listKey, lobbyId)
-                redis.call('EXPIRE', listKey, 120)
-            end
-        end
-        -- todo: create the lobby
+        ---- Create a new lobby
+        --local lobby = {
+        --    id = lobbyId,
+        --    participants = users,
+        --    created_at = userScore,
+        --    state = 'created'
+        --}
+        --local lobbyJson = cjson.encode(lobby)
+        --redis.call('JSON.SET', 'lobby:' .. lobbyId, '.', lobbyJson)
+        ---- Notify the matched users via Pub/Sub channel
+        --for i, v in ipairs(users) do
+        --    if v ~= userId then
+        --        local listKey = 'matchmaking:' .. v
+        --        redis.call('RPUSH', listKey, lobbyId)
+        --        redis.call('EXPIRE', listKey, 120)
+        --    end
+        --end
         return { true, lobbyId, users } -- Matching succeeded
     else
         -- Add the current user to the queue since not enough users are present

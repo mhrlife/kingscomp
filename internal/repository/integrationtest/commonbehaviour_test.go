@@ -103,3 +103,49 @@ func TestCommonBehaviourMGetNotExists(t *testing.T) {
 	assert.Len(t, items, 0)
 
 }
+
+func TestCommonBehaviourMSet(t *testing.T) {
+	redisClient, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", redisPort))
+	assert.NoError(t, err)
+	ctx := context.Background()
+	cb := repository.NewRedisCommonBehaviour[testType](redisClient)
+
+	err = cb.MSet(ctx,
+		testType{ID: "er1", Name: "Erfan"},
+		testType{ID: "er2", Name: "Erfan"},
+		testType{ID: "er3", Name: "Erfan"},
+	)
+
+	assert.NoError(t, err)
+
+	gets, err := cb.MGet(ctx,
+		entity.NewID("testType", "er1"),
+		entity.NewID("testType", "er2"),
+		entity.NewID("testType", "er3"))
+	assert.NoError(t, err)
+	assert.Len(t, gets, 3)
+	assert.Equal(t, gets[0].ID, "er1")
+	assert.Equal(t, gets[0].Name, "Erfan")
+
+}
+
+func TestCommonBehaviourUpdateField(t *testing.T) {
+	redisClient, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", redisPort))
+	assert.NoError(t, err)
+	ctx := context.Background()
+	cb := repository.NewRedisCommonBehaviour[testType](redisClient)
+
+	err = cb.MSet(ctx,
+		testType{ID: "a1", Name: "Amir"},
+	)
+
+	assert.NoError(t, err)
+
+	err = cb.SetField(ctx, entity.NewID("testType", "a1"), "Name", "Test")
+	assert.NoError(t, err)
+
+	ent, err := cb.Get(ctx, entity.NewID("testType", "a1"))
+	assert.NoError(t, err)
+	assert.Equal(t, ent.Name, "Test")
+
+}

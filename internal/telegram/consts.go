@@ -12,6 +12,8 @@ var (
 	DefaultMatchmakingLoadingInterval = DefaultMatchmakingTimeout / 10 //todo: increase in the production
 	DefaultInputTimeout               = time.Minute * 5
 	DefaultTimeoutText                = `🕗 منتظر پیامت بودیم چیزی ارسال نکردی. لطفا هر وقت برگشتی دوباره پیام بده.`
+	DefaultReminderToReadyAfter       = time.Second * 10
+	DefaultReadyDeadline              = time.Second * 20
 
 	TxtConfirm = `✅ بله`
 	TxtDecline = `✖ خیر`

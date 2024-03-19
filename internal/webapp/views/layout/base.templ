@@ -17,6 +17,10 @@ templ Base(){
             margin: 0;
             box-sizing: border-box;
             direction: rtl;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         body {
@@ -78,6 +82,37 @@ templ Base(){
             font-size: 16px;
             border-radius: 8px;
         }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .time-indicator {
+            -webkit-mask: linear-gradient(270deg, rgba(0, 0, 0, 1), transparent 80%);
+            height: 20px;
+            width: 80px;
+            background: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            -webkit-text-stroke: 2px var(--tg-theme-button-color);
+        }
+        .time-indicator-holder{
+            width: 100%;
+            border: 2px var(--tg-theme-button-color) solid;
+            height: 24px;
+            direction: ltr !important;
+            overflow: hidden;
+            position: relative;
+            border-radius: 4px;
+        }
+        .time-indicator-text{
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            color: var(--tg-theme-hint-color);
+            font-size: 16px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body x-data="{
@@ -100,6 +135,11 @@ templ Base(){
 
 
 '>
+
+<div class="time-indicator-holder">
+    <div class="time-indicator" style="margin-left: calc( 100% - 80px)"></div>
+    <div class="time-indicator-text">21ثانیه</div>
+</div>
 <template x-if="auth === 0">
     <div class="center">
         <div>
@@ -109,11 +149,11 @@ templ Base(){
     </div>
 </template>
 
-<template x-if="auth === 1">
+<template x-if="auth === 1" x-transition x-cloak>
     { children... }
 </template>
 
-<template x-if="auth === 2">
+<template x-if="auth === 2" x-cloak>
     <div class="center">
         <h2>مشکلی پیش آمده :(</h2>
         <p>لطفا دوباره تلاش کنید یا به پشتیبانی اطلاع دهید</p>
@@ -134,7 +174,6 @@ templ Base(){
         })
 
         response = await response.json()
-        console.log(response);
         return response
     }
 </script>
