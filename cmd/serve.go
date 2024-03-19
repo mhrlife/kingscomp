@@ -8,6 +8,7 @@ import (
 	"golang.ngrok.com/ngrok"
 	ngrokconfig "golang.ngrok.com/ngrok/config"
 	"kingscomp/internal/config"
+	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"
 	"kingscomp/internal/repository/redis"
@@ -43,15 +44,16 @@ func serve(_ *cobra.Command, _ []string) {
 	)
 
 	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository, questionRepository)
+	gs := gameserver.NewGameServer(app)
 
-	tg, err := telegram.NewTelegram(app, mm, os.Getenv("BOT_API"))
+	tg, err := telegram.NewTelegram(app, mm, gs, os.Getenv("BOT_API"))
 	if err != nil {
 		logrus.WithError(err).Fatalln("couldn't connect to the telegram server")
 	}
 
 	go tg.Start()
 
-	wa := webapp.NewWebApp(app, ":8080")
+	wa := webapp.NewWebApp(app, gs, ":8080")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()

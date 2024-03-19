@@ -118,10 +118,12 @@ templ Base(){
 <body x-data="{
     theme: window.Telegram.WebApp.themeParams,
     auth: 0, // 0 means validating, 1 means validate, 2 means invalid,
+    authError: ''
 }"
       x-init='
 
         let response = await post("/auth/validate")
+
         if (!response["data"]["is_valid"]) {
             auth = 2;
             return

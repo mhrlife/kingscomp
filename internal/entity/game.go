@@ -1,5 +1,10 @@
 package entity
 
+import (
+	"github.com/samber/lo"
+	"golang.org/x/exp/maps"
+)
+
 type UserState struct {
 	IsReady    bool `json:"isReady"`
 	IsResigned bool `json:"isResigned"`
@@ -18,6 +23,15 @@ type Lobby struct {
 	UserState map[int64]UserState `json:"userState"`
 
 	State string `json:"state"`
+}
+
+func (l Lobby) EveryoneReady() bool {
+	return lo.Reduce(maps.Values(l.UserState), func(agg bool, item UserState, _ int) bool {
+		if !agg {
+			return agg
+		}
+		return item.IsResigned || item.IsReady
+	}, true)
 }
 
 func (l Lobby) EntityID() ID {

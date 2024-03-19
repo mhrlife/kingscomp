@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
 	"io/fs"
+	"kingscomp/internal/gameserver"
 	"kingscomp/internal/service"
 	"net"
 	"net/http"
@@ -17,26 +18,20 @@ import (
 //go:embed static
 var embededFiles embed.FS
 
-func getFileSystem() http.FileSystem {
-	fSys, err := fs.Sub(embededFiles, "static")
-	if err != nil {
-		logrus.WithError(err).Panicln("couldn't init static embedding")
-	}
-	return http.FS(fSys)
-}
-
 type WebApp struct {
 	App  *service.App
 	e    *echo.Echo
 	addr string
+	gs   *gameserver.GameServer
 }
 
-func NewWebApp(app *service.App, addr string) *WebApp {
+func NewWebApp(app *service.App, gs *gameserver.GameServer, addr string) *WebApp {
 	e := echo.New()
 	wa := &WebApp{
 		App:  app,
 		e:    e,
 		addr: addr,
+		gs:   gs,
 	}
 	wa.urls()
 	wa.static()
@@ -78,4 +73,12 @@ func (w *WebApp) static() {
 		},
 	)
 
+}
+
+func getFileSystem() http.FileSystem {
+	fSys, err := fs.Sub(embededFiles, "static")
+	if err != nil {
+		logrus.WithError(err).Panicln("couldn't init static embedding")
+	}
+	return http.FS(fSys)
 }

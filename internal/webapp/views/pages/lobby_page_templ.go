@@ -31,14 +31,14 @@ func LobbyPage(lobbyId string) templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"center\" x-init=\"\n let readyResponse = await post(&#39;/lobby/&#39;+$root.dataset.lobbyid+&#39;/ready&#39;)\n\" x-data=\"\" data-lobbyid=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"center\" x-init=\"\n    let readyResponse = await post(&#39;/lobby/&#39;+$root.dataset.lobbyid+&#39;/ready&#39;)\n    if (readyResponse[&#39;code&#39;] !== 200){\n        alert(readyResponse[&#39;data&#39;]);\n        WebApp.close()\n    }\n\" x-data=\"\" data-lobbyid=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(lobbyId)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/webapp/views/pages/lobby_page.templ`, Line: 11, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/webapp/views/pages/lobby_page.templ`, Line: 15, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {

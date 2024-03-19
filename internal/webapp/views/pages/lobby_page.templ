@@ -7,10 +7,14 @@ templ LobbyPage(lobbyId string){
 @layout.Base(){
 
 <div class="center" x-init="
- let readyResponse = await post('/lobby/'+$root.dataset.lobbyid+'/ready')
+    let readyResponse = await post('/lobby/'+$root.dataset.lobbyid+'/ready')
+    if (readyResponse['code'] !== 200){
+        alert(readyResponse['data']);
+        WebApp.close()
+    }
 " x-data="" data-lobbyid={lobbyId}>
-    <p class="hint" style="margin-bottom: 10px">در اینجا بزودی یک بازی قرار میگیرد!</p>
-    <button class="tg-button">یک دکمه پیشنهادی</button>
+<p class="hint" style="margin-bottom: 10px">در اینجا بزودی یک بازی قرار میگیرد!</p>
+<button class="tg-button">یک دکمه پیشنهادی</button>
 </div>
 
 }

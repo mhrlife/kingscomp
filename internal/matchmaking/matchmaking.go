@@ -51,8 +51,12 @@ func NewRedisMatchmaking(client rueidis.Client, lobby repository.Lobby, question
 func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.Duration) (entity.Lobby, bool, error) {
 
 	defer func() {
-		removeFromQueue := r.client.B().Zrem().Key("matchmaking").Member(strconv.FormatInt(userId, 10)).Build()
-		if err := r.client.Do(ctx, removeFromQueue).Error(); err != nil {
+		cmds := make([]rueidis.Completed, 0)
+		cmds = append(cmds,
+			r.client.B().Zrem().Key("matchmaking").Member(strconv.FormatInt(userId, 10)).Build(),
+			r.client.B().Del().Key(fmt.Sprintf("matchmaking:%d", userId)).Build(),
+		)
+		if err := repository.ReduceRedisResponseError(r.client.DoMulti(ctx, cmds...)); err != nil {
 			logrus.WithError(err).Errorln("couldn't successfully leave the match making")
 		}
 	}()
@@ -71,6 +75,7 @@ func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.D
 
 	// inside a queue, we must listen to the pub/sub
 	if len(resp) == 1 {
+		logrus.WithField("userId", userId).Info("waiting for a lobby")
 		cmd := r.client.B().Brpop().
 			Key(fmt.Sprintf("matchmaking:%d", userId)).Timeout(timeout.Seconds()).Build()
 		result, err := r.client.Do(ctx, cmd).AsStrSlice()
@@ -81,9 +86,15 @@ func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.D
 			logrus.WithError(err).Errorln("couldn't get matchmaking notice from redis")
 			return entity.Lobby{}, false, err
 		}
+
 		if len(result) < 2 {
 			return entity.Lobby{}, false, ErrTimeout
 		}
+
+		logrus.WithFields(logrus.Fields{
+			"userId": userId,
+			"lobby":  result[1],
+		}).Info("found a new lobby")
 		lobby, err := r.lobby.Get(ctx, entity.NewID("lobby", result[1]))
 		return lobby, false, err
 	}
@@ -91,6 +102,7 @@ func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.D
 	// you have just created a lobby
 	if len(resp) == 3 {
 		lobbyId, _ := resp[1].ToString()
+		logrus.WithField("lobbyId", lobbyId).Info("created a new lobby")
 		matchedUsers, _ := resp[2].AsIntSlice()
 
 		lobby, err := r.createNewLobby(ctx, lobbyId, matchedUsers)
@@ -152,7 +164,7 @@ func (r RedisMatchmaking) createNewLobby(ctx context.Context, lobbyId string, us
 				Key(entity.NewID("account", participant).String()).Path("$..current_lobby").
 				Value(fmt.Sprintf(`"%s"`, lobbyId)).Xx().Build(),
 			r.client.B().Rpush().Key(userMatchmakingListKey).Element(lobbyId).Build(),
-			r.client.B().Expire().Key(userMatchmakingListKey).Seconds(120).Build(),
+			r.client.B().Expire().Key(userMatchmakingListKey).Seconds(10).Build(),
 		)
 	}
 

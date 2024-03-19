@@ -78,7 +78,7 @@ getInput:
 }
 
 func generateKeyboard(rows [][]string) *telebot.ReplyMarkup {
-	mu := &telebot.ReplyMarkup{ResizeKeyboard: true, OneTimeKeyboard: true}
+	mu := &telebot.ReplyMarkup{ResizeKeyboard: true, OneTimeKeyboard: true, ForceReply: true, RemoveKeyboard: true}
 	mu.Reply(lo.Map(rows, func(row []string, _ int) telebot.Row {
 		return mu.Row(lo.Map(row, func(btn string, _ int) telebot.Btn {
 			return mu.Text(btn)

@@ -5,15 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/telebot.v3"
 	"kingscomp/internal/entity"
+	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
 	"strings"
 	"time"
 )
 
 func (t *Telegram) joinMatchmaking(c telebot.Context) error {
+	c.Respond()
 	myAccount := GetAccount(c)
 
 	if myAccount.CurrentLobby != "" { //todo: show the current game's status
@@ -75,39 +76,22 @@ loading:
 	// setup reminder with goroutines
 
 	if isHost {
-		go func() {
-			<-time.After(DefaultReminderToReadyAfter)
-			lobby, err := t.App.Lobby.Get(context.Background(), lobby.EntityID())
-			if err != nil {
-				logrus.WithError(err).Error("couldn't get lobby to setup reminder")
-				return
-			}
 
-			fmt.Println(lobby.Participants)
-			for _, participant := range lobby.Participants {
-				if !lobby.UserState[participant].IsReady {
-					fmt.Println("sent to ", participant)
-					c.Bot().Send(&telebot.User{ID: participant},
-						`⚠️ بازی جدید برای شما ساخته شده اما هنوز بازی را باز نکرده اید! تا چند ثانیه دیگر اگر بازی را باز نکنید تسلیم شده در نظر گرفته میشوید.`,
-						NewLobbyInlineKeyboards(lobby.ID))
-				}
-			}
-			<-time.After(DefaultReadyDeadline - DefaultReminderToReadyAfter)
-			lobby, err = t.App.Lobby.Get(context.Background(), lobby.EntityID())
-			for _, participant := range lobby.Participants {
-				if !lobby.UserState[participant].IsReady {
-					t.App.Lobby.UpdateUserState(context.Background(),
-						lobby.ID, participant, "isResigned", true)
-					if err := t.App.Account.SetField(context.Background(),
-						entity.NewID("account", participant),
-						"current_lobby", ""); err != nil {
-						logrus.WithError(err).Errorln("couldn't resign user and change its current lobby")
-					}
-					c.Bot().Send(&telebot.User{ID: participant},
-						`😔 متاسفانه چون وارد بازی جدید نشدید مجبور شدیم وضعیتتون رو به «تسلیم شده» تغییر بدیم.`)
-				}
-			}
-		}()
+		game, err := t.gs.Register(lobby.ID)
+		if err != nil {
+			return err
+		}
+
+		game.Events.Register(gameserver.EventJoinReminder, func(info gameserver.EventInfo) {
+			c.Bot().Send(&telebot.User{ID: info.AccountID},
+				`⚠️ بازی جدید برای شما ساخته شده اما هنوز بازی را باز نکرده اید! تا چند ثانیه دیگر اگر بازی را باز نکنید تسلیم شده در نظر گرفته میشوید.`,
+				NewLobbyInlineKeyboards(lobby.ID))
+		})
+
+		game.Events.Register(gameserver.EventLateResign, func(info gameserver.EventInfo) {
+			c.Bot().Send(&telebot.User{ID: info.AccountID},
+				`😔 متاسفانه چون وارد بازی جدید نشدید مجبور شدیم وضعیتتون رو به «تسلیم شده» تغییر بدیم.`)
+		})
 	}
 
 	myAccount.CurrentLobby = lobby.ID
@@ -148,13 +132,28 @@ func NewLobbyInlineKeyboards(lobbyId string) *telebot.ReplyMarkup {
 }
 
 func (t *Telegram) resignLobby(c telebot.Context) error {
+	defer c.Bot().Delete(c.Message())
 	myAccount := GetAccount(c)
+	myLobby := myAccount.CurrentLobby
+	if myLobby == "" {
+		c.Respond(&telebot.CallbackResponse{
+			Text: `شما قبلا از این بازی انصراف داده بودید`,
+		})
+		return t.myInfo(c)
+	}
+	c.Respond(&telebot.CallbackResponse{
+		Text: `✅ با موفقیت از بازی فعلی انصراف دادید`,
+	})
 	myAccount.CurrentLobby = ""
 	if err := t.App.Account.Save(context.Background(), myAccount); err != nil {
 		return err
 	}
 
-	c.Send(`✅ با موفقیت از بازی فعلی انصراف دادید`)
+	if err := t.App.Lobby.UpdateUserState(context.Background(),
+		myLobby, myAccount.ID, "isResigned", true); err != nil {
+		return err
+	}
+
 	c.Set("account", myAccount)
 	return t.myInfo(c)
 }

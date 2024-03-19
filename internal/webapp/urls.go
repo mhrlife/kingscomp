@@ -57,11 +57,11 @@ func (w *WebApp) canAccessLobby(next echo.HandlerFunc) echo.HandlerFunc {
 
 		lobby, err := w.App.Lobby.Get(c.Request().Context(), entity.NewID("lobby", lobbyId))
 		if err != nil {
-			return c.JSON(401, ResponseError(401, "lobby not found inside the url"))
+			return c.JSON(200, ResponseError(401, "lobby not found inside the url"))
 		}
 
 		if !slices.Contains(lobby.Participants, acc.ID) {
-			return c.JSON(403, ResponseError(403, "you don't have access to the lobby"))
+			return c.JSON(200, ResponseError(403, "you don't have access to the lobby"))
 		}
 
 		c.Set("lobby", lobby)
