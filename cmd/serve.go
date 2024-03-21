@@ -32,7 +32,7 @@ func serve(_ *cobra.Command, _ []string) {
 	// set up repositories
 	redisClient, err := redis.NewRedisClient(os.Getenv("REDIS_URL"))
 	if err != nil {
-		logrus.WithError(err).Fatalln("couldn't connect to te redis server")
+		logrus.WithError(err).Fatalln("couldn't connect to the redis server")
 	}
 	accountRepository := repository.NewAccountRedisRepository(redisClient)
 	lobbyRepository := repository.NewLobbyRedisRepository(redisClient)
