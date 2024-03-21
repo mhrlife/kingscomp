@@ -27,6 +27,9 @@ var serveCmd = &cobra.Command{
 
 func serve(_ *cobra.Command, _ []string) {
 	_ = godotenv.Load()
+	if os.Getenv("ENV") != "local" {
+		logrus.SetLevel(logrus.ErrorLevel)
+	}
 	// set up repositories
 	redisClient, err := redis.NewRedisClient(os.Getenv("REDIS_URL"))
 	if err != nil {
