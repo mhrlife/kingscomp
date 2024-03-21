@@ -21,18 +21,13 @@ var insertQuestionCmd = &cobra.Command{
 	Short: "insert a list of questions",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		filePath, _ := cmd.Flags().GetString("file-path")
+		json, _ := cmd.Flags().GetString("json")
 
-		if filePath == "" {
+		if json == "" {
 			logrus.Fatalln("please enter the file-path using --file-path")
 		}
 
-		b, err := os.ReadFile(filePath)
-		if err != nil {
-			logrus.WithError(err).Errorln("couldn't open the questions file")
-		}
-
-		questions := jsonhelper.Decode[[]entity.Question](b)
+		questions := jsonhelper.Decode[[]entity.Question]([]byte(json))
 
 		_ = godotenv.Load()
 		// set up repositories
@@ -56,5 +51,5 @@ var insertQuestionCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(insertQuestionCmd)
-	insertQuestionCmd.PersistentFlags().String("file-path", "", "path of the JSON questions file")
+	insertQuestionCmd.PersistentFlags().String("json", "", "path of the JSON questions file")
 }
