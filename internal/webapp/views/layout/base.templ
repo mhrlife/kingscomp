@@ -223,6 +223,7 @@ templ Base(){
             lobbyHash: "",
             questionTimer: 0,
             timerPercent: 0,
+            questionDuration: 0,
 
             async initLobby() {
                 if (this.isInit) {
@@ -244,9 +245,9 @@ templ Base(){
                 }
 
                 this.currentLobby = response['data'];
-                this.isInit = true
                 this.runEventWorker()
                 this.questionTimerWorker()
+                this.isInit = true
             },
             setLobbyId(lobbyId) {
                 this.lobbyId = lobbyId
@@ -260,7 +261,6 @@ templ Base(){
                     }
                     this.currentLobby = response["data"]["lobby"];
                     this.lobbyHash = response["data"]["hash"];
-                    this.questionTimer = this.currentLobby.gameInfo.questionEndsAt - Math.floor(Date.now() / 1000)
                     if (this.currentLobby['state'] === 'ended') {
                         return
                     }
@@ -280,10 +280,16 @@ templ Base(){
             },
             questionTimerWorker() {
                 setInterval(() => {
-                    this.questionTimer -= 0.100
                     let duration = this.currentLobby.gameInfo.questionEndsAt - this.currentLobby.gameInfo.questionStartedAt
-                    this.timerPercent = Math.ceil((100 - (this.questionTimer * 100 / duration)))
-                }, 100)
+                    if (duration === 0) {
+                        return
+                    }
+                    let currentUnix = (new Date() / 1000)
+                    let newPercent = Math.floor((currentUnix - this.currentLobby.gameInfo.questionStartedAt) / duration * 100)
+                    if (newPercent >= 100)
+                        newPercent = 100
+                    this.timerPercent = newPercent
+                }, 300)
             }
         })
     })

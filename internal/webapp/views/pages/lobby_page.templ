@@ -50,6 +50,7 @@ templ LobbyPage(lobbyId string){
                         <div class="time-indicator"
                              :style="'margin-left: calc( '+$store.lobby.timerPercent+'% - 80px)'"></div>
                     </div>
+
                     <h2 style="width: 100%; margin-top: 5px;"
                         x-text="$store.lobby.currentLobby.gameInfo.currentQuestion.question"></h2>
                     <div style="padding-top:30px; width: 100%;display: flex;flex-wrap: wrap;justify-content: space-between">
@@ -66,7 +67,7 @@ templ LobbyPage(lobbyId string){
                             <div style="overflow: hidden;margin-top: 5px" class="box-with-border flex-row">
                                 <strong x-text="participant.displayName"></strong>
                                 <template x-if="participant.isResigned">
-                                    <span>این کاربر شکست خورده!</span>
+                                    <span style="font-size: 12px" class="hint">این کاربر شکست خورده!</span>
                                 </template>
                                 <template x-if="!participant.isResigned">
                                     <div style="display: flex;justify-content: flex-start;align-items: center">
