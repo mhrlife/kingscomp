@@ -1,8 +1,10 @@
 package telegram
 
 import (
+	"context"
 	"fmt"
 	"gopkg.in/telebot.v3"
+	"kingscomp/internal/entity"
 )
 
 func (t *Telegram) start(c telebot.Context) error {
@@ -20,6 +22,16 @@ func (t *Telegram) start(c telebot.Context) error {
 
 func (t *Telegram) myInfo(c telebot.Context) error {
 	account := GetAccount(c)
+
+	// check if users lobby already exists
+	if account.CurrentLobby != "" {
+		_, err := t.App.Lobby.Get(context.Background(), entity.NewID("lobby", account.CurrentLobby))
+		if err != nil {
+			account.CurrentLobby = ""
+			t.App.Account.Save(context.Background(), account)
+		}
+	}
+
 	selector := &telebot.ReplyMarkup{}
 	var rows []telebot.Row
 	rows = append(rows, selector.Row(btnEditDisplayName))

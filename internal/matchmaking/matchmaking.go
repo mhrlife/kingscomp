@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/redis/rueidis"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/repository"
@@ -35,16 +36,22 @@ type RedisMatchmaking struct {
 	client            rueidis.Client
 	matchMakingScript *rueidis.Lua
 	lobby             repository.Lobby
+	account           repository.Account
 	question          repository.Question
 }
 
-func NewRedisMatchmaking(client rueidis.Client, lobby repository.Lobby, question repository.Question) *RedisMatchmaking {
+func NewRedisMatchmaking(client rueidis.Client,
+	lobby repository.Lobby,
+	question repository.Question,
+	account repository.Account,
+) *RedisMatchmaking {
 	script := rueidis.NewLuaScript(matchmakingScript)
 	return &RedisMatchmaking{
 		client:            client,
 		matchMakingScript: script,
 		lobby:             lobby,
 		question:          question,
+		account:           account,
 	}
 }
 
@@ -136,10 +143,22 @@ func (r RedisMatchmaking) createNewLobby(ctx context.Context, lobbyId string, us
 		return entity.Lobby{}, err
 	}
 
+	fullUsers, err := r.account.MGet(ctx, lo.Map(users, func(item int64, index int) entity.ID {
+		return entity.NewID("account", item)
+	})...)
+	if err != nil {
+		logrus.WithError(err).Errorln("couldn't fetch accounts to add them to lobby")
+		return entity.Lobby{}, err
+	}
 	// create the lobby
 	userStates := make(map[int64]entity.UserState, len(users))
 	for _, user := range users {
 		userStates[user] = entity.UserState{}
+	}
+	for _, user := range fullUsers {
+		s := userStates[user.ID]
+		s.DisplayName = user.DisplayName
+		userStates[user.ID] = s
 	}
 	lobby := entity.Lobby{
 		ID:            lobbyId,
@@ -153,6 +172,9 @@ func (r RedisMatchmaking) createNewLobby(ctx context.Context, lobbyId string, us
 	cmds = append(cmds,
 		r.client.B().JsonSet().Key(entity.NewID("lobby", lobby.ID).String()).Path(".").Value(
 			string(jsonhelper.Encode(lobby)),
+		).Build(),
+		r.client.B().Expire().Key(entity.NewID("lobby", lobby.ID).String()).Seconds(
+			int64((time.Minute * 15).Seconds()),
 		).Build(),
 	)
 

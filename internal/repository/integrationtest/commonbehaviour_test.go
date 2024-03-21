@@ -149,3 +149,19 @@ func TestCommonBehaviourUpdateField(t *testing.T) {
 	assert.Equal(t, ent.Name, "Test")
 
 }
+
+func TestCommonBehaviourKeys(t *testing.T) {
+	redisClient, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", redisPort))
+	assert.NoError(t, err)
+	ctx := context.Background()
+	cb := repository.NewRedisCommonBehaviour[testType](redisClient)
+
+	err = cb.MSet(ctx,
+		testType{ID: "a1", Name: "Amir"},
+	)
+
+	keys, err := cb.AllIDs(ctx, "testType")
+	assert.NoError(t, err)
+	assert.Contains(t, keys[0], "testType:")
+
+}

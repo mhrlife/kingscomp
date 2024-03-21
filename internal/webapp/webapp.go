@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/service"
-	"net"
 	"net/http"
 	"time"
 )
@@ -47,10 +46,10 @@ func (w *WebApp) Shutdown(ctx context.Context) error {
 	return w.e.Shutdown(ctx)
 }
 
-func (w *WebApp) StartDev(listener net.Listener) error {
+func (w *WebApp) StartDev() error {
 	w.e.Use(middleware.Logger())
 	w.e.Use(middleware.Recover())
-	return http.Serve(listener, w.e)
+	return w.e.Start(w.addr)
 }
 
 func (w *WebApp) static() {

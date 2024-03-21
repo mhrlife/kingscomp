@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"kingscomp/internal/entity"
+	"slices"
 	"sync"
 )
 
@@ -28,11 +29,13 @@ func NewEvents() *Events {
 }
 
 func (e *Events) Dispatch(t EventType, info EventInfo) {
+	info.Type = t
 	e.mu.RLock()
-	defer e.mu.RUnlock()
-	for _, listener := range e.listeners[t] {
+	listeners := append(e.listeners[t], e.listeners[EventAny]...)
+	for _, listener := range listeners {
 		go listener.callback(info)
 	}
+	e.mu.RUnlock()
 }
 
 func (e *Events) ListenerCount(t EventType) int {
@@ -70,13 +73,44 @@ func (e *Events) Register(t EventType, callback Callback) func() {
 }
 
 const (
-	EventReady EventType = iota
+	EventAny       EventType = -1
+	EventUserReady EventType = iota
 	EventUserResigned
 	EventJoinReminder
 	EventLateResign
+	EventForceLobbyReload
+	EventUserAnswer
 )
 
+var eventTypes = map[EventType]string{
+	EventUserReady:    "user-ready",
+	EventUserResigned: "user-resigned",
+	EventJoinReminder: "join-reminder",
+	EventLateResign:   "late-resign",
+}
+
+func (e EventType) Type() string {
+	t, ok := eventTypes[e]
+	if !ok {
+		return "undefined"
+	}
+	return t
+}
+
 type EventInfo struct {
+	Type EventType
+
 	AccountID int64
 	Account   entity.Account
+
+	QuestionIndex int
+	UserAnswer    int
+}
+
+func (e EventInfo) IsType(acceptable ...EventType) bool {
+	return isEvent(e.Type, acceptable...)
+}
+
+func isEvent(et EventType, acceptable ...EventType) bool {
+	return slices.Contains(acceptable, et)
 }

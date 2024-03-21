@@ -9,6 +9,7 @@ import (
 	"kingscomp/internal/entity"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
+	"kingscomp/internal/repository"
 	"strings"
 	"time"
 )
@@ -102,8 +103,18 @@ loading:
 
 func (t *Telegram) currentLobby(c telebot.Context) error {
 	myAccount := GetAccount(c)
+
 	lobby, accounts, err := t.App.LobbyParticipants(context.Background(), myAccount.CurrentLobby)
 	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			c.Respond(&telebot.CallbackResponse{
+				Text: `این بازی به اتمام رسیده است`,
+			})
+			c.Bot().Delete(c.Message())
+			myAccount.CurrentLobby = ""
+			t.App.Account.Save(context.Background(), myAccount)
+			return t.myInfo(c)
+		}
 		return err
 	}
 
@@ -149,10 +160,12 @@ func (t *Telegram) resignLobby(c telebot.Context) error {
 		return err
 	}
 
-	if err := t.App.Lobby.UpdateUserState(context.Background(),
-		myLobby, myAccount.ID, "isResigned", true); err != nil {
-		return err
-	}
+	t.App.Lobby.UpdateUserState(context.Background(),
+		myLobby, myAccount.ID, "isResigned", true)
+
+	t.gs.MustGame(myLobby).Events.Dispatch(gameserver.EventUserResigned, gameserver.EventInfo{
+		AccountID: myAccount.ID,
+	})
 
 	c.Set("account", myAccount)
 	return t.myInfo(c)

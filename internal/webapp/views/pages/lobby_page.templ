@@ -7,15 +7,51 @@ templ LobbyPage(lobbyId string){
 @layout.Base(){
 
 <div class="center" x-init="
-    let readyResponse = await post('/lobby/'+$root.dataset.lobbyid+'/ready')
-    if (readyResponse['code'] !== 200){
-        alert(readyResponse['data']);
-        WebApp.close()
-    }
+    $store.lobby.setLobbyId($root.dataset.lobbyid)
+    await $store.lobby.initLobby()
 " x-data="" data-lobbyid={lobbyId}>
-<p class="hint" style="margin-bottom: 10px">در اینجا بزودی یک بازی قرار میگیرد!</p>
-<button class="tg-button">یک دکمه پیشنهادی</button>
-</div>
 
+    <template x-if="$store.lobby.isInit">
+
+        <div style="width: 90%;margin-left: 5%">
+            <template x-if="['created','get-ready'].includes($store.lobby.currentLobby.state)">
+                <div class="anim-fade-in" style="width: 100%">
+                    <h2>خوش آمدید <span x-text="$store.lobby.currentPlayer.display_name"></span></h2>
+                    <p style="margin-bottom: 20px">درحال انتظار برای متصل شدن بقیه بازیکنان</p>
+                    <template x-for="(value, index) in $store.lobby.currentLobby.participants">
+                        <div class="box-with-border flex-row" style="margin-bottom: 4px;">
+                            <div x-text="value.displayName"></div>
+                            <div x-show="value.isReady" class="hint"><i class="gg-check-r"></i> <span> متصل شده</span>
+                            </div>
+                            <div x-show="!value.isReady && !value.isResigned" class="hint">
+                                <i class="gg-loadbar"></i>
+                                انتظار اتصال
+                            </div>
+                            <div x-show="value.isResigned" class="hint"><i class="gg-smile-sad"></i> انصراف داده</div>
+                        </div>
+                    </template>
+                    <div style="padding-top: 10px">
+                        <p class="hint" x-show="$store.lobby.currentLobby.state === 'created'" x-transition>
+                            به محض اتصال همه‌ی بازیکنان بازی شروع میشود</p>
+                        <p class="hint" x-transition x-show="$store.lobby.currentLobby.state === 'get-ready'">
+                            <i class="gg-check-r"></i>
+                            همه وصل شدن و بازی داره شروع میشه!
+                        </p>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </template>
+
+    <template x-if="!$store.lobby.isInit">
+        <div class="center">
+            <div>
+                <div class="spinner"></div>
+            </div>
+            <p class="hint">درحال دریافت اطلاعات بازی</p>
+        </div>
+    </template>
+</div>
 }
 }

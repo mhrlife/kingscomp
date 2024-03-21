@@ -31,20 +31,20 @@ func LobbyPage(lobbyId string) templ.Component {
 				templ_7745c5c3_Buffer = templ.GetBuffer()
 				defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"center\" x-init=\"\n    let readyResponse = await post(&#39;/lobby/&#39;+$root.dataset.lobbyid+&#39;/ready&#39;)\n    if (readyResponse[&#39;code&#39;] !== 200){\n        alert(readyResponse[&#39;data&#39;]);\n        WebApp.close()\n    }\n\" x-data=\"\" data-lobbyid=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"center\" x-init=\"\n    $store.lobby.setLobbyId($root.dataset.lobbyid)\n    await $store.lobby.initLobby()\n\" x-data=\"\" data-lobbyid=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(lobbyId)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/webapp/views/pages/lobby_page.templ`, Line: 15, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/webapp/views/pages/lobby_page.templ`, Line: 12, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\"><p class=\"hint\" style=\"margin-bottom: 10px\">در اینجا بزودی یک بازی قرار میگیرد!</p><button class=\"tg-button\">یک دکمه پیشنهادی</button></div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\"><template x-if=\"$store.lobby.isInit\"><div style=\"width: 90%;margin-left: 5%\"><template x-if=\"[&#39;created&#39;,&#39;get-ready&#39;].includes($store.lobby.currentLobby.state)\"><div class=\"anim-fade-in\" style=\"width: 100%\"><h2>خوش آمدید <span x-text=\"$store.lobby.currentPlayer.display_name\"></span></h2><p style=\"margin-bottom: 20px\">درحال انتظار برای متصل شدن بقیه بازیکنان</p><template x-for=\"(value, index) in $store.lobby.currentLobby.participants\"><div class=\"box-with-border flex-row\" style=\"margin-bottom: 4px;\"><div x-text=\"value.displayName\"></div><div x-show=\"value.isReady\" class=\"hint\"><i class=\"gg-check-r\"></i> <span>متصل شده</span></div><div x-show=\"!value.isReady &amp;&amp; !value.isResigned\" class=\"hint\"><i class=\"gg-loadbar\"></i> انتظار اتصال</div><div x-show=\"value.isResigned\" class=\"hint\"><i class=\"gg-smile-sad\"></i> انصراف داده</div></div></template><div style=\"padding-top: 10px\"><p class=\"hint\" x-show=\"$store.lobby.currentLobby.state === &#39;created&#39;\" x-transition>به محض اتصال همه\u200cی بازیکنان بازی شروع میشود</p><p class=\"hint\" x-transition x-show=\"$store.lobby.currentLobby.state === &#39;get-ready&#39;\"><i class=\"gg-check-r\"></i> همه وصل شدن و بازی داره شروع میشه!</p></div></div></template></div></template><template x-if=\"!$store.lobby.isInit\"><div class=\"center\"><div><div class=\"spinner\"></div></div><p class=\"hint\">درحال دریافت اطلاعات بازی</p></div></template></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

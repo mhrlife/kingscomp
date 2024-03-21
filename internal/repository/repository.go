@@ -16,6 +16,7 @@ type CommonBehaviour[T entity.Entity] interface {
 	MGet(ctx context.Context, ids ...entity.ID) ([]T, error)
 	MSet(ctx context.Context, ents ...T) error
 	SetField(ctx context.Context, id entity.ID, fieldName string, value any) error
+	AllIDs(ctx context.Context, prefix string) ([]string, error)
 }
 
 //go:generate mockery --name Account

@@ -3,14 +3,20 @@ package entity
 import (
 	"github.com/samber/lo"
 	"golang.org/x/exp/maps"
+	"time"
 )
 
 type UserState struct {
 	IsReady    bool `json:"isReady"`
 	IsResigned bool `json:"isResigned"`
 
-	CurrentQuestionIndex    int  `json:"currentQuestionIndex"`
-	CurrentQuestionAnswered bool `json:"currentQuestionAnswered"`
+	LastAnsweredQuestionIndex int    `json:"lastAnsweredQuestionIndex"`
+	DisplayName               string `json:"displayName"`
+}
+type GameInfo struct {
+	CurrentQuestion          int              `json:"currentQuestion"`
+	CurrentQuestionStartedAt time.Time        `json:"currentQuestionStartedAt"`
+	CorrectAnswers           map[int64][]bool `json:"correctAnswers"`
 }
 
 type Lobby struct {
@@ -18,6 +24,7 @@ type Lobby struct {
 	Participants  []int64 `json:"participants"`
 	CreatedAtUnix int64   `json:"created_at"`
 
+	GameInfo  GameInfo   `json:"gameInfo"`
 	Questions []Question `json:"questions"`
 
 	UserState map[int64]UserState `json:"userState"`
@@ -32,6 +39,20 @@ func (l Lobby) EveryoneReady() bool {
 		}
 		return item.IsResigned || item.IsReady
 	}, true)
+}
+
+func (l Lobby) NotAnsweredUsers() []int64 {
+	var userIds []int64
+	for _, userId := range l.Participants {
+		us := l.UserState[userId]
+		if us.IsResigned {
+			continue
+		}
+		if len(l.GameInfo.CorrectAnswers[userId]) != l.GameInfo.CurrentQuestion+1 {
+			userIds = append(userIds, userId)
+		}
+	}
+	return userIds
 }
 
 func (l Lobby) EntityID() ID {

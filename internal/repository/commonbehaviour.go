@@ -100,3 +100,13 @@ func (r RedisCommonBehaviour[T]) MSet(ctx context.Context, ents ...T) error {
 	}
 	return nil
 }
+func (r RedisCommonBehaviour[T]) AllIDs(ctx context.Context, prefix string) ([]string, error) {
+	cmd := r.client.B().Keys().Pattern(prefix + ":*").Build()
+	keys, err := r.client.Do(ctx, cmd).AsStrSlice()
+	if err != nil {
+		logrus.WithError(err).WithField("prefix", prefix).Errorln("couldn't fetch keys with prefix")
+		return nil, err
+	}
+
+	return keys, nil
+}

@@ -17,6 +17,8 @@ func (w *WebApp) urls() {
 	lobby := w.e.Group("/lobby")
 	lobby.GET("/:lobbyId", w.lobbyIndex)
 	lobby.POST("/:lobbyId/ready", w.lobbyReady, w.authorize, w.canAccessLobby)
+	lobby.POST("/:lobbyId/info", w.lobbyInfo, w.authorize, w.canAccessLobby)
+	lobby.POST("/:lobbyId/events", w.lobbyEvents, w.authorize, w.canAccessLobby)
 
 	auth := w.e.Group("/auth")
 	auth.POST("/validate", w.validateInitData, w.authorize)
@@ -57,11 +59,15 @@ func (w *WebApp) canAccessLobby(next echo.HandlerFunc) echo.HandlerFunc {
 
 		lobby, err := w.App.Lobby.Get(c.Request().Context(), entity.NewID("lobby", lobbyId))
 		if err != nil {
-			return c.JSON(200, ResponseError(401, "lobby not found inside the url"))
+			return c.JSON(200, ResponseError(401, "این بازی به اتمام رسیده است"))
 		}
 
 		if !slices.Contains(lobby.Participants, acc.ID) {
-			return c.JSON(200, ResponseError(403, "you don't have access to the lobby"))
+			return c.JSON(200, ResponseError(403, "شما به این بازی دسترسی ندارید"))
+		}
+
+		if lobby.UserState[acc.ID].IsResigned {
+			return c.JSON(200, ResponseOk(401, "شما از این بازی انصراف داده بودید"))
 		}
 
 		c.Set("lobby", lobby)

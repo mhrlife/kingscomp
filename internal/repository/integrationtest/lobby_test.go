@@ -32,5 +32,5 @@ func TestLobby_Ready(t *testing.T) {
 
 	lobby, err := lr.Get(ctx, entity.NewID("lobby", 1))
 	assert.NoError(t, err)
-	fmt.Println(lobby.UserState[1].IsReady)
+	assert.True(t, lobby.UserState[1].IsReady)
 }

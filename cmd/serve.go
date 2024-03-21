@@ -5,9 +5,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.ngrok.com/ngrok"
-	ngrokconfig "golang.ngrok.com/ngrok/config"
-	"kingscomp/internal/config"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"
@@ -43,8 +40,8 @@ func serve(_ *cobra.Command, _ []string) {
 		service.NewLobbyService(lobbyRepository),
 	)
 
-	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository, questionRepository)
-	gs := gameserver.NewGameServer(app)
+	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository, questionRepository, accountRepository)
+	gs := gameserver.NewGameServer(app, gameserver.DefaultGameServerConfig())
 
 	tg, err := telegram.NewTelegram(app, mm, gs, os.Getenv("BOT_API"))
 	if err != nil {
@@ -58,29 +55,24 @@ func serve(_ *cobra.Command, _ []string) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	// use ngrok if its local
 	if os.Getenv("ENV") == "local" {
-		listener, err := ngrok.Listen(ctx,
-			ngrokconfig.HTTPEndpoint(ngrokconfig.WithDomain(os.Getenv("NGROK_DOMAIN"))),
-			ngrok.WithAuthtokenFromEnv(),
-		)
-		if err != nil {
-			logrus.WithError(err).Fatalln("couldn't set up ngrok")
-		}
-		defer listener.Close()
-		config.Default.WebAppAddr = "https://" + listener.Addr().String()
-		logrus.WithField("ngrok_addr", config.Default.WebAppAddr).Info("local server is now online")
-		logrus.WithError(wa.StartDev(listener)).Errorln("http server error")
+		go func() {
+			logrus.WithError(wa.StartDev()).Errorln("http server error")
+		}()
 	} else {
-		wa.Start()
+		go func() {
+			logrus.WithError(wa.Start()).Errorln("http server error")
+		}()
 	}
 
-	defer wa.Shutdown(context.Background())
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	defer wa.Shutdown(shutdownCtx)
 	defer tg.Shutdown()
 
+	logrus.Info("server is up and running")
 	<-ctx.Done()
 	logrus.Info("shutting down the server ... please wait ...")
-	<-time.After(time.Second)
 }
 
 func init() {

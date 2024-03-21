@@ -10,7 +10,8 @@ templ Base(){
     <title>KingsComp</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="/static/fontiran.css"/>
+    <link href="https://css.gg/css" rel="stylesheet"/>
+    <link rel="stylesheet" href="/static/fontiran.css?v=0.0.0-debug"/>
     <style>
         * {
             padding: 0;
@@ -23,10 +24,19 @@ templ Base(){
             user-select: none;
         }
 
+        i {
+            float: right;
+            margin-left: 4px;
+        }
+
+        .gg-loadbar {
+            padding-top: 8px;
+        }
+
         body {
             --bg-color: var(--tg-theme-bg-color);
             background-color: var(--bg-color);
-            font-family: Ravi NoEn, serif;
+            font-family: Ravi FaNum, serif;
             color: var(--tg-theme-text-color);
             margin: 48px 24px;
             padding: 0;
@@ -34,7 +44,7 @@ templ Base(){
         }
 
         a, button, p, div, h1, h2, h3, h4, h5, h6, b, strong, em {
-            font-family: Ravi NoEn, serif;
+            font-family: Ravi FaNum, serif;
         }
 
         a {
@@ -95,7 +105,24 @@ templ Base(){
             color: var(--tg-theme-button-text-color);
             -webkit-text-stroke: 2px var(--tg-theme-button-color);
         }
-        .time-indicator-holder{
+
+        .anim-fade-in {
+            animation: fadeInScale 0.4s cubic-bezier(0, 0.55, 0.45, 1) 0s 1 normal forwards;
+        }
+
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: scale(1.4);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .time-indicator-holder {
             width: 100%;
             border: 2px var(--tg-theme-button-color) solid;
             height: 24px;
@@ -104,7 +131,8 @@ templ Base(){
             position: relative;
             border-radius: 4px;
         }
-        .time-indicator-text{
+
+        .time-indicator-text {
             position: absolute;
             left: 50%;
             top: 50%;
@@ -112,6 +140,20 @@ templ Base(){
             color: var(--tg-theme-hint-color);
             font-size: 16px;
             font-weight: bold;
+        }
+
+        .box-with-border {
+            border: 1px var(--tg-theme-hint-color) solid;
+            border-radius: 4px;
+            width: 100%;
+            color: var(--tg-theme-text-color);
+            padding: 5px 10px;
+        }
+
+        .flex-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
@@ -138,10 +180,10 @@ templ Base(){
 
 '>
 
-<div class="time-indicator-holder">
-    <div class="time-indicator" style="margin-left: calc( 100% - 80px)"></div>
-    <div class="time-indicator-text">21ثانیه</div>
-</div>
+<!--<div class="time-indicator-holder">-->
+<!--    <div class="time-indicator" style="margin-left: calc( 100% - 80px)"></div>-->
+<!--    <div class="time-indicator-text">21ثانیه</div>-->
+<!--</div>-->
 <template x-if="auth === 0">
     <div class="center">
         <div>
@@ -177,6 +219,65 @@ templ Base(){
 
         response = await response.json()
         return response
+    }
+</script>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('lobby', {
+            isInit: false,
+            lobbyId: "",
+            currentLobby: {},
+            currentPlayer: {},
+            lobbyHash: "",
+
+            async initLobby() {
+                if (this.isInit) {
+                    return
+                }
+
+                let response = await post('/lobby/' + this.lobbyId + '/ready')
+                if (response['code'] !== 200) {
+                    alert(response['data']);
+                    WebApp.close()
+                }
+
+                this.currentPlayer = response["data"];
+
+                response = await post('/lobby/' + this.lobbyId + '/info')
+                if (response['code'] !== 200) {
+                    alert(response['data']);
+                    WebApp.close()
+                }
+
+                this.currentLobby = response['data'];
+                this.isInit = true
+                this.runEventWorker()
+            },
+            setLobbyId(lobbyId) {
+                this.lobbyId = lobbyId
+            },
+            async runEventWorker() {
+                while (true) {
+                    let response = await this.readEvents()
+                    if (!response["ok"]) {
+                        alert(response["data"])
+                        return
+                    }
+                    this.currentLobby = response["data"]["lobby"];
+                    this.lobbyHash = response["data"]["hash"];
+                }
+            },
+            async readEvents() {
+                return await post('/lobby/' + this.lobbyId + '/events', {
+                    hash: this.lobbyHash,
+                })
+            }
+        })
+    })
+
+
+    function translateState(state) {
+
     }
 </script>
 </body>

@@ -19,25 +19,25 @@ This set of fonts are used in this project under the license: (.....)
 
 
 @font-face {
-	font-family: Ravi NoEn;
+	font-family: Ravi FaNum;
 	font-style: normal;
 	font-weight: normal;
-	src: url('fonts/woff/RaviNoEn-Regular.woff') format('woff'),   
-	url('fonts/woff2/RaviNoEn-Regular.woff2') format('woff2');		 
+	src: url('fonts/woff/RaviFaNum-Regular.woff') format('woff'),   
+	url('fonts/woff2/RaviFaNum-Regular.woff2') format('woff2');		 
 }
 
 @font-face {
-	font-family: Ravi NoEn;
+	font-family: Ravi FaNum;
 	font-style: normal;
 	font-weight: bold;
-	src: url('fonts/woff/RaviNoEn-Bold.woff') format('woff'),   
-	url('fonts/woff2/RaviNoEn-Bold.woff2') format('woff2'); 
+	src: url('fonts/woff/RaviFaNum-Bold.woff') format('woff'),   
+	url('fonts/woff2/RaviFaNum-Bold.woff2') format('woff2'); 
 }
 
 @font-face {
-	font-family: Ravi NoEn;
+	font-family: Ravi FaNum;
 	font-style: normal;
 	font-weight: 950;
-	src: url('fonts/woff/Ravi NoEn-ExtraBlack.woff') format('woff'),   
-	url('fonts/woff2/Ravi NoEn-ExtraBlack.woff2') format('woff2');		 
+	src: url('fonts/woff/Ravi FaNum-ExtraBlack.woff') format('woff'),   
+	url('fonts/woff2/Ravi FaNum-ExtraBlack.woff2') format('woff2');		 
 }

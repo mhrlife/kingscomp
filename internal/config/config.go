@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"github.com/joho/godotenv"
+	"os"
+)
 
 type Config struct {
 	WebAppAddr string
@@ -9,7 +12,8 @@ type Config struct {
 var Default Config
 
 func init() {
+	_ = godotenv.Load()
 	Default = Config{
-		WebAppAddr: os.Getenv("WEBAPP_ADDR"),
+		WebAppAddr: os.Getenv("WEBAPP_URL"),
 	}
 }
