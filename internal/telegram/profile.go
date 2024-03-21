@@ -18,7 +18,7 @@ func (t *Telegram) editDisplayNamePrompt(c telebot.Context, promptText string) e
 		Prompt: promptText,
 		Confirm: Confirm{
 			ConfirmText: func(msg *telebot.Message) string {
-				return fmt.Sprintf(`ℹ از این به بعد شما را «%s» صدا میزنیم.
+				return fmt.Sprintf(`🖊 از این به بعد شما را «%s» صدا میزنیم.
 
 ثبت نهایی و ادامه؟`, msg.Text)
 			},
