@@ -16,6 +16,7 @@ type UserState struct {
 type GameInfo struct {
 	CurrentQuestion          int              `json:"currentQuestion"`
 	CurrentQuestionStartedAt time.Time        `json:"currentQuestionStartedAt"`
+	CurrentQuestionEndsAt    time.Time        `json:"CurrentQuestionEndsAt"`
 	CorrectAnswers           map[int64][]bool `json:"correctAnswers"`
 }
 

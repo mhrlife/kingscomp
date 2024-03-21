@@ -51,12 +51,16 @@ func (g *Game) Start(ctx context.Context) {
 
 		var err error
 		switch g.lobby.State {
-		case "created":
+		case "created": // just created, waiting for other users to join
 			err = g.created()
-		case "get-ready":
+		case "get-ready": // showing count down of game start
 			err = g.getReady()
-		case "started":
+		case "started": // users are answering to questions
 			err = g.started()
+		case "ended":
+			g.close()
+			return
+
 		default:
 			logrus.WithFields(logrus.Fields{
 				"lobbyId": g.lobby.ID,
@@ -83,12 +87,11 @@ func (g *Game) created() error {
 
 	defer cleanAny()
 
-	noticeSent := false
 	defer g.Events.Clean(EventJoinReminder)
 	defer g.Events.Clean(EventLateResign)
-
 	defer g.reloadClientLobbies()
 
+	noticeSent := false
 	deadline, cancel := context.WithTimeout(context.Background(), g.ReminderToReadyAfter)
 	for {
 		select {
@@ -120,9 +123,6 @@ func (g *Game) created() error {
 					g.Events.Dispatch(EventJoinReminder, EventInfo{AccountID: accountId})
 				}
 			} else {
-				g.lobby.State = "get-ready"
-				g.saveLobby()
-
 				for accountId, state := range g.lobby.UserState {
 					if state.IsResigned || state.IsReady {
 						continue
@@ -136,12 +136,14 @@ func (g *Game) created() error {
 					}
 					logrus.WithField("userId", accountId).Info("user late resigned")
 					g.Events.Dispatch(EventLateResign, EventInfo{AccountID: accountId})
-					g.reloadClientLobbies()
 				}
+
+				g.lobby.State = "get-ready"
+				g.saveLobby()
+				g.reloadClientLobbies()
 				return nil
 			}
 		}
-
 	}
 }
 
@@ -153,67 +155,74 @@ func (g *Game) getReady() error {
 	g.lobby.GameInfo.CorrectAnswers = make(map[int64][]bool)
 	g.lobby.GameInfo.CurrentQuestion = 0
 	g.lobby.GameInfo.CurrentQuestionStartedAt = time.Now()
+	g.lobby.GameInfo.CurrentQuestionEndsAt = time.Now().Add(g.Config.QuestionTimeout)
 	g.saveLobby()
 	return nil
 }
 
 func (g *Game) started() error {
-	chUpdate := make(chan struct{}, 10)
+	chUpdate := make(chan EventInfo, 10)
 	eCancel := g.Events.Register(EventAny, func(info EventInfo) {
 		if !info.IsType(EventUserAnswer, EventUserResigned) {
 			return
 		}
-		g.loadLobby()
-		switch info.Type {
-		case EventUserAnswer:
-			accountId := info.AccountID
-			answerIndex := info.UserAnswer
-			questionIndex := info.QuestionIndex
-			if questionIndex != g.lobby.GameInfo.CurrentQuestion {
-				return
-			}
-
-			// check has answered questionIndex of questionIndex+1 questions
-			if len(g.lobby.GameInfo.CorrectAnswers[accountId]) != questionIndex {
-				return
-			}
-
-			answer := g.lobby.Questions[questionIndex].CorrectAnswer == answerIndex
-			g.lobby.GameInfo.CorrectAnswers[accountId] = append(g.lobby.GameInfo.CorrectAnswers[accountId], answer)
-			userState := g.lobby.UserState[accountId]
-			userState.LastAnsweredQuestionIndex = questionIndex
-			g.lobby.UserState[accountId] = userState
-			g.saveLobby()
-			chUpdate <- struct{}{}
-
-		case EventUserResigned:
-			accountId := info.AccountID
-			if !slices.Contains(g.lobby.Participants, accountId) {
-				return
-			}
-
-			userState := g.lobby.UserState[accountId]
-			if userState.IsResigned {
-				return
-			}
-			userState.IsResigned = true
-			g.lobby.UserState[accountId] = userState
-			g.saveLobby()
-			g.reloadClientLobbies()
-		}
+		chUpdate <- info
 	})
 	defer eCancel()
 
 	for {
+
 		timeout, cancel := context.WithTimeout(g.ctx,
-			g.QuestionTimeout-time.Since(g.lobby.GameInfo.CurrentQuestionStartedAt))
+			g.lobby.GameInfo.CurrentQuestionEndsAt.Sub(time.Now()))
+
+		if g.lobby.State == "ended" {
+			cancel()
+			return nil
+		}
 
 		select {
 		case <-g.ctx.Done():
 			cancel()
 			return nil
-		case <-chUpdate: // one user has made their answer
+		case info := <-chUpdate: // one user has made their answer
 			g.loadLobby()
+			switch info.Type {
+			case EventUserResigned:
+				//todo: check if all users have answered except the resigned user
+				accountId := info.AccountID
+				if !slices.Contains(g.lobby.Participants, accountId) {
+					continue
+				}
+
+				userState := g.lobby.UserState[accountId]
+				if userState.IsResigned {
+					continue
+				}
+				userState.IsResigned = true
+				g.lobby.UserState[accountId] = userState
+				g.saveLobby()
+				g.reloadClientLobbies()
+			case EventUserAnswer:
+				accountId := info.AccountID
+				answerIndex := info.UserAnswer
+				questionIndex := info.QuestionIndex
+
+				if questionIndex != g.lobby.GameInfo.CurrentQuestion {
+					continue
+				}
+				// check has answered questionIndex of questionIndex+1 questions
+				if len(g.lobby.GameInfo.CorrectAnswers[accountId]) != questionIndex {
+					continue
+				}
+
+				answer := g.lobby.Questions[questionIndex].CorrectAnswer == answerIndex
+				g.lobby.GameInfo.CorrectAnswers[accountId] = append(g.lobby.GameInfo.CorrectAnswers[accountId], answer)
+				userState := g.lobby.UserState[accountId]
+				userState.LastAnsweredQuestionIndex = questionIndex
+				g.lobby.UserState[accountId] = userState
+				g.saveLobby()
+			}
+
 			if len(g.lobby.NotAnsweredUsers()) != 0 {
 				g.reloadClientLobbies()
 				continue
@@ -230,8 +239,18 @@ func (g *Game) started() error {
 }
 
 func (g *Game) nextQuestion() {
+	// they have answered to all questions
+	if g.lobby.GameInfo.CurrentQuestion == len(g.lobby.Questions)-1 {
+		g.lobby.State = "ended"
+		//todo: find who is the winner and create the scoreboard
+		g.saveLobby()
+		g.reloadClientLobbies()
+		return
+	}
+
 	g.lobby.GameInfo.CurrentQuestion += 1
 	g.lobby.GameInfo.CurrentQuestionStartedAt = time.Now()
+	g.lobby.GameInfo.CurrentQuestionEndsAt = time.Now().Add(g.Config.QuestionTimeout)
 	g.saveLobby()
 	g.reloadClientLobbies()
 }
@@ -257,4 +276,15 @@ func (g *Game) saveLobby() {
 		g.cancel()
 		return
 	}
+}
+
+func (g *Game) close() {
+	for userId, state := range g.lobby.UserState {
+		if !state.IsResigned {
+			g.Events.Dispatch(EventGameClosed, EventInfo{AccountID: userId})
+		}
+	}
+	<-time.After(1 * time.Second)
+	g.Events.close()
+	g.cancel()
 }

@@ -80,7 +80,6 @@ templ Base(){
 
         .tg-button {
             padding: 12px;
-            margin: 8px;
             background: var(--tg-theme-button-color);
             color: var(--tg-theme-button-text-color);
             border: none;
@@ -99,11 +98,12 @@ templ Base(){
 
         .time-indicator {
             -webkit-mask: linear-gradient(270deg, rgba(0, 0, 0, 1), transparent 80%);
-            height: 20px;
+            height: 10px;
             width: 80px;
             background: var(--tg-theme-button-color);
             color: var(--tg-theme-button-text-color);
             -webkit-text-stroke: 2px var(--tg-theme-button-color);
+            transition: 0.2s;
         }
 
         .anim-fade-in {
@@ -125,7 +125,7 @@ templ Base(){
         .time-indicator-holder {
             width: 100%;
             border: 2px var(--tg-theme-button-color) solid;
-            height: 24px;
+            height: 14px;
             direction: ltr !important;
             overflow: hidden;
             position: relative;
@@ -163,7 +163,6 @@ templ Base(){
     authError: ''
 }"
       x-init='
-
         let response = await post("/auth/validate")
 
         if (!response["data"]["is_valid"]) {
@@ -175,15 +174,8 @@ templ Base(){
         WebApp.ready();
         WebApp.expand();
         WebApp.enableClosingConfirmation();
-
-
-
 '>
 
-<!--<div class="time-indicator-holder">-->
-<!--    <div class="time-indicator" style="margin-left: calc( 100% - 80px)"></div>-->
-<!--    <div class="time-indicator-text">21ثانیه</div>-->
-<!--</div>-->
 <template x-if="auth === 0">
     <div class="center">
         <div>
@@ -229,6 +221,8 @@ templ Base(){
             currentLobby: {},
             currentPlayer: {},
             lobbyHash: "",
+            questionTimer: 0,
+            timerPercent: 0,
 
             async initLobby() {
                 if (this.isInit) {
@@ -252,6 +246,7 @@ templ Base(){
                 this.currentLobby = response['data'];
                 this.isInit = true
                 this.runEventWorker()
+                this.questionTimerWorker()
             },
             setLobbyId(lobbyId) {
                 this.lobbyId = lobbyId
@@ -265,20 +260,33 @@ templ Base(){
                     }
                     this.currentLobby = response["data"]["lobby"];
                     this.lobbyHash = response["data"]["hash"];
+                    this.questionTimer = this.currentLobby.gameInfo.questionEndsAt - Math.floor(Date.now() / 1000)
+                    if (this.currentLobby['state'] === 'ended') {
+                        return
+                    }
                 }
             },
             async readEvents() {
                 return await post('/lobby/' + this.lobbyId + '/events', {
                     hash: this.lobbyHash,
                 })
+            },
+            async answered(answer) {
+                let currentQuestion = this.currentLobby.gameInfo.currentQuestion.index
+                await post("/lobby/" + this.lobbyId + "/answer", {
+                    index: currentQuestion,
+                    answer: answer,
+                })
+            },
+            questionTimerWorker() {
+                setInterval(() => {
+                    this.questionTimer -= 0.100
+                    let duration = this.currentLobby.gameInfo.questionEndsAt - this.currentLobby.gameInfo.questionStartedAt
+                    this.timerPercent = Math.ceil((100 - (this.questionTimer * 100 / duration)))
+                }, 100)
             }
         })
     })
-
-
-    function translateState(state) {
-
-    }
 </script>
 </body>
 </html>

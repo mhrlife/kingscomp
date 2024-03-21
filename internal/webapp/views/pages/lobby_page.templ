@@ -12,7 +12,6 @@ templ LobbyPage(lobbyId string){
 " x-data="" data-lobbyid={lobbyId}>
 
     <template x-if="$store.lobby.isInit">
-
         <div style="width: 90%;margin-left: 5%">
             <template x-if="['created','get-ready'].includes($store.lobby.currentLobby.state)">
                 <div class="anim-fade-in" style="width: 100%">
@@ -37,6 +36,70 @@ templ LobbyPage(lobbyId string){
                             <i class="gg-check-r"></i>
                             همه وصل شدن و بازی داره شروع میشه!
                         </p>
+                    </div>
+                </div>
+            </template>
+            <template x-if="['started'].includes($store.lobby.currentLobby.state)">
+                <div class="anim-fade-in center" style="width: 100%">
+                    <p class="hint">
+                        شماره سوال:
+                        <span x-text="$store.lobby.currentLobby.gameInfo.currentQuestion.index+1"></span>
+                    </p>
+
+                    <div class="time-indicator-holder" style="width: 100%">
+                        <div class="time-indicator"
+                             :style="'margin-left: calc( '+$store.lobby.timerPercent+'% - 80px)'"></div>
+                    </div>
+                    <h2 style="width: 100%; margin-top: 5px;"
+                        x-text="$store.lobby.currentLobby.gameInfo.currentQuestion.question"></h2>
+                    <div style="padding-top:30px; width: 100%;display: flex;flex-wrap: wrap;justify-content: space-between">
+                        <template x-for="(value,index) in $store.lobby.currentLobby.gameInfo.currentQuestion.choices">
+                            <button class="tg-button" style="width: 45%;margin-bottom: 10px"
+                                    @click.prevent="$store.lobby.answered(index)">
+                                <span x-text="value"></span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <div class="active-users" style="width: 100%">
+                        <template x-for="participant in $store.lobby.currentLobby.participants">
+                            <div style="overflow: hidden;margin-top: 5px" class="box-with-border flex-row">
+                                <strong x-text="participant.displayName"></strong>
+                                <template x-if="participant.isResigned">
+                                    <span>این کاربر شکست خورده!</span>
+                                </template>
+                                <template x-if="!participant.isResigned">
+                                    <div style="display: flex;justify-content: flex-start;align-items: center">
+                                        <template x-if="!!participant.history.answerHistory"
+                                                  x-for="answer in participant.history.answerHistory">
+                                            <p style="padding-left: 4px;">
+                                                <i x-show="answer" class="gg-check-o"></i>
+                                                <i x-show="!answer" class="gg-radio-check"></i>
+                                            </p>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <template x-if="['ended'].includes($store.lobby.currentLobby.state)">
+                <div class="anim-fade-in" style="width: 100%">
+                    <div class="center">
+                        <h4 style="padding: 30px">بازی به اتمام رسید!</h4>
+
+                        <p class="hint">برنده بازی</p>
+                        <h1 class="flex-row">
+                            <i class="gg-crown"></i>
+                            <strong x-text="$store.lobby.currentLobby.result.winner"></strong>
+                        </h1>
+                        <h4 class="hint">
+                            رتبه اول را با
+                            <strong x-text="$store.lobby.currentLobby.result.winnerScore">
+                            </strong>
+                            امتیاز کسب کرد
+                        </h4>
                     </div>
                 </div>
             </template>

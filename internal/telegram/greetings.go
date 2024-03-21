@@ -25,8 +25,8 @@ func (t *Telegram) myInfo(c telebot.Context) error {
 
 	// check if users lobby already exists
 	if account.CurrentLobby != "" {
-		_, err := t.App.Lobby.Get(context.Background(), entity.NewID("lobby", account.CurrentLobby))
-		if err != nil {
+		myLobby, err := t.App.Lobby.Get(context.Background(), entity.NewID("lobby", account.CurrentLobby))
+		if err != nil || myLobby.State == "ended" {
 			account.CurrentLobby = ""
 			t.App.Account.Save(context.Background(), account)
 		}

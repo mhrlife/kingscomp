@@ -39,7 +39,7 @@ func (t *Telegram) joinMatchmaking(c telebot.Context) error {
 	var lobby entity.Lobby
 	var isHost bool
 	go func() {
-		lobby, isHost, err = t.mm.Join(context.Background(), c.Sender().ID, time.Second*10)
+		lobby, isHost, err = t.mm.Join(context.Background(), c.Sender().ID, DefaultMatchmakingTimeout)
 		ch <- struct{}{}
 	}()
 
@@ -92,6 +92,12 @@ loading:
 		game.Events.Register(gameserver.EventLateResign, func(info gameserver.EventInfo) {
 			c.Bot().Send(&telebot.User{ID: info.AccountID},
 				`😔 متاسفانه چون وارد بازی جدید نشدید مجبور شدیم وضعیتتون رو به «تسلیم شده» تغییر بدیم.`)
+		})
+
+		game.Events.Register(gameserver.EventGameClosed, func(info gameserver.EventInfo) {
+			c.Bot().Send(&telebot.User{ID: info.AccountID}, `🎲 بازی با موفقیت به اتمام رسید. خسته نباشید.
+
+اگه میخواید ربات رو استارت کنید یا بازی جدیدی شروع کنید روی /home کلیک کنید.`)
 		})
 	}
 

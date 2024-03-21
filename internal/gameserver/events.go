@@ -17,6 +17,7 @@ type Listener struct {
 	uuid     string
 }
 
+// Events todo: needs to be scalable, use redis instead
 type Events struct {
 	mu        sync.RWMutex
 	listeners map[EventType][]Listener
@@ -52,6 +53,12 @@ func (e *Events) Clean(t EventType) {
 	e.listeners[t] = make([]Listener, 0)
 }
 
+func (e *Events) close() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.listeners = make(map[EventType][]Listener)
+}
+
 func (e *Events) Register(t EventType, callback Callback) func() {
 	e.mu.Lock()
 
@@ -80,13 +87,15 @@ const (
 	EventLateResign
 	EventForceLobbyReload
 	EventUserAnswer
+	EventGameClosed
 )
 
 var eventTypes = map[EventType]string{
-	EventUserReady:    "user-ready",
-	EventUserResigned: "user-resigned",
-	EventJoinReminder: "join-reminder",
-	EventLateResign:   "late-resign",
+	EventUserReady:        "user-ready",
+	EventUserResigned:     "user-resigned",
+	EventJoinReminder:     "join-reminder",
+	EventLateResign:       "late-resign",
+	EventForceLobbyReload: "lobby-reload",
 }
 
 func (e EventType) Type() string {

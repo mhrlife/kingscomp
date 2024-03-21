@@ -94,7 +94,8 @@ func NewLobbyKVRepository() *LobbyKVRepository {
 	return &LobbyKVRepository{KVRepository: NewKVRepository[entity.Lobby]()}
 }
 
-func (l *LobbyKVRepository) UpdateUserState(ctx context.Context, lobbyId string, userId int64, key string, val any) error {
+func (l *LobbyKVRepository) UpdateUserState(ctx context.Context,
+	lobbyId string, userId int64, key string, val any) error {
 	us := l.kvStore[entity.NewID("lobby", lobbyId)].UserState[userId]
 	switch key {
 	case "isResigned":
@@ -177,8 +178,7 @@ func (s *GameServerTestSuite) SetupTest() {
 	})
 	s.gs = NewGameServer(&service.App{
 		Account: service.NewAccountService(s.accounts),
-
-		Lobby: service.NewLobbyService(s.lobbies),
+		Lobby:   service.NewLobbyService(s.lobbies),
 	}, Config{
 		ReminderToReadyAfter: time.Millisecond * 50,
 		ReadyDeadline:        time.Millisecond * 100,
@@ -281,6 +281,38 @@ func (s *GameServerTestSuite) TestAnswerQuestionAnswer() {
 	assert.Len(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2], 2)
 	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[1][1])
 	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2][1])
+}
+
+func (s *GameServerTestSuite) TestLobbyEnded() {
+	s.ready(1)
+	s.ready(2)
+	<-time.After(time.Millisecond * 210)
+	assert.Equal(s.T(), "started", s.game.lobby.State)
+
+	for i := 0; i < len(s.game.lobby.Questions); i++ {
+		assert.Equal(s.T(), i, s.game.lobby.GameInfo.CurrentQuestion)
+		s.answer(i, 1, 1)
+		s.answer(i, 1, 2)
+		<-time.After(time.Millisecond * 10)
+		if i < len(s.game.lobby.Questions)-1 {
+			assert.Equal(s.T(), i+1, s.game.lobby.GameInfo.CurrentQuestion)
+		} else {
+			assert.Equal(s.T(), i, s.game.lobby.GameInfo.CurrentQuestion)
+		}
+	}
+
+	<-time.After(time.Millisecond * 10)
+	assert.Equal(s.T(), "ended", s.game.lobby.State)
+	assert.ErrorIs(s.T(), context.Canceled, s.game.ctx.Err())
+
+}
+
+func (s *GameServerTestSuite) answer(question, answer int, accountId int64) {
+	s.game.Events.Dispatch(EventUserAnswer, EventInfo{
+		AccountID:     accountId,
+		QuestionIndex: question,
+		UserAnswer:    answer,
+	})
 }
 
 func (s *GameServerTestSuite) ready(userId int64) {

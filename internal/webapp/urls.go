@@ -19,6 +19,7 @@ func (w *WebApp) urls() {
 	lobby.POST("/:lobbyId/ready", w.lobbyReady, w.authorize, w.canAccessLobby)
 	lobby.POST("/:lobbyId/info", w.lobbyInfo, w.authorize, w.canAccessLobby)
 	lobby.POST("/:lobbyId/events", w.lobbyEvents, w.authorize, w.canAccessLobby)
+	lobby.POST("/:lobbyId/answer", w.lobbyAnswer, w.authorize, w.canAccessLobby)
 
 	auth := w.e.Group("/auth")
 	auth.POST("/validate", w.validateInitData, w.authorize)

@@ -5,6 +5,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	_ "go.uber.org/automaxprocs"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"

@@ -1,7 +1,6 @@
 package webapp
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/gameserver"
@@ -34,6 +33,33 @@ func (w *WebApp) lobbyReady(c echo.Context) error {
 	return c.JSON(200, ResponseOk(200, NewFullAccountSerializer(account)))
 }
 
+type answerRequest struct {
+	Index  int `json:"index"`
+	Answer int `json:"answer"`
+}
+
+func (w *WebApp) lobbyAnswer(c echo.Context) error {
+	account := getAccount(c)
+	lobby := getLobby(c)
+
+	var request answerRequest
+	if err := c.Bind(&request); err != nil {
+		return err
+	}
+
+	game, err := w.gs.Game(lobby.ID)
+	if err == nil {
+		game.Events.Dispatch(gameserver.EventUserAnswer, gameserver.EventInfo{
+			Account:       account,
+			AccountID:     account.ID,
+			QuestionIndex: request.Index,
+			UserAnswer:    request.Answer,
+		})
+	}
+
+	return c.JSON(200, ResponseOk(200, "با موفقیت درخواست ثبت شد"))
+}
+
 func (w *WebApp) lobbyInfo(c echo.Context) error {
 	lobby := getLobby(c)
 	return c.JSON(200, ResponseOk(200, NewLobbySerializer(lobby)))
@@ -52,12 +78,14 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 	ch := make(chan EventResponseSerializer, 1)
 	cancel := game.Events.Register(gameserver.EventAny, func(info gameserver.EventInfo) {
 		if !info.IsType(gameserver.EventForceLobbyReload) {
-			fmt.Println(info.Type, "is not", gameserver.EventForceLobbyReload)
 			return
 		}
 		logrus.WithField("lobbyId", lobby.ID).Info("lobby event update")
 
-		lobby, _ := w.App.Lobby.Get(c.Request().Context(), lobby.EntityID())
+		lobby, err := w.App.Lobby.Get(c.Request().Context(), lobby.EntityID())
+		if err != nil {
+			return
+		}
 		h, _ := Hash(lobby)
 		ch <- NewEventResponseSerializer(lobby, info, h)
 	})

@@ -9,28 +9,96 @@ import (
 	"strconv"
 )
 
+type ParticipantAnswerHistory struct {
+	AnswerHistory []bool `json:"answerHistory"`
+}
 type ParticipantSerializer struct {
-	ID                      int64  `json:"id"`
-	DisplayName             string `json:"displayName"`
-	IsReady                 bool   `json:"isReady"`
-	IsResigned              bool   `json:"isResigned"`
-	CurrentQuestionAnswered bool   `json:"currentQuestionAnswered"`
+	ID          int64                    `json:"id"`
+	DisplayName string                   `json:"displayName"`
+	IsReady     bool                     `json:"isReady"`
+	IsResigned  bool                     `json:"isResigned"`
+	History     ParticipantAnswerHistory `json:"history"`
 }
 
-func NewParticipantSerializer(state entity.UserState, id int64, currentQuestion int) ParticipantSerializer {
-	return ParticipantSerializer{
-		ID:                      id,
-		DisplayName:             state.DisplayName,
-		IsReady:                 state.IsReady,
-		IsResigned:              state.IsResigned,
-		CurrentQuestionAnswered: state.LastAnsweredQuestionIndex >= currentQuestion,
+func NewParticipantSerializer(state entity.UserState, id int64, answers []bool) ParticipantSerializer {
+	if answers == nil {
+		answers = make([]bool, 0)
 	}
+	return ParticipantSerializer{
+		ID:          id,
+		DisplayName: state.DisplayName,
+		IsReady:     state.IsReady,
+		IsResigned:  state.IsResigned,
+		History: ParticipantAnswerHistory{
+			AnswerHistory: answers,
+		},
+	}
+}
+
+type QuestionSerializer struct {
+	Index    int      `json:"index"`
+	Question string   `json:"question"`
+	Choices  []string `json:"choices"`
+}
+
+func NewQuestionSerializer(qIndex int, q entity.Question) QuestionSerializer {
+	return QuestionSerializer{
+		Index:    qIndex,
+		Question: q.Question,
+		Choices:  q.Answers,
+	}
+}
+
+type GameInfoSerializer struct {
+	CurrentQuestion   QuestionSerializer `json:"currentQuestion"`
+	QuestionStartedAt int64              `json:"questionStartedAt"`
+	QuestionEndsAt    int64              `json:"questionEndsAt"`
+}
+
+func NewGameInfoSerializer(lobby entity.Lobby) GameInfoSerializer {
+	gameInfoSerialized := GameInfoSerializer{
+		CurrentQuestion: NewQuestionSerializer(
+			lobby.GameInfo.CurrentQuestion,
+			lobby.Questions[lobby.GameInfo.CurrentQuestion],
+		),
+		QuestionStartedAt: lobby.GameInfo.CurrentQuestionStartedAt.Unix(),
+		QuestionEndsAt:    lobby.GameInfo.CurrentQuestionEndsAt.Unix(),
+	}
+
+	return gameInfoSerialized
+}
+
+type ResultSerializer struct {
+	Winner      string `json:"winner"`
+	WinnerScore int    `json:"winnerScore"`
+}
+
+// NewResultSerializer todo: fix winning condition
+func NewResultSerializer(lobby entity.Lobby) ResultSerializer {
+	winnerName := ""
+	winnerScore := 0
+
+	for _, accountId := range lobby.Participants {
+		score := lo.Reduce(lobby.GameInfo.CorrectAnswers[accountId], func(agg int, item bool, _ int) int {
+			if item {
+				agg++
+			}
+			return agg
+		}, 0)
+		if score >= winnerScore {
+			winnerName = lobby.UserState[accountId].DisplayName
+			winnerScore = score
+		}
+	}
+	return ResultSerializer{Winner: winnerName, WinnerScore: winnerScore}
 }
 
 type LobbySerializer struct {
 	ID           string                          `json:"id"`
 	State        string                          `json:"state"`
 	Participants map[int64]ParticipantSerializer `json:"participants"`
+	GameInfo     GameInfoSerializer              `json:"gameInfo"`
+	Result       ResultSerializer                `json:"result"`
 }
 
 func NewLobbySerializer(lobby entity.Lobby) LobbySerializer {
@@ -40,9 +108,11 @@ func NewLobbySerializer(lobby entity.Lobby) LobbySerializer {
 		Participants: lo.MapValues[int64, entity.UserState, ParticipantSerializer](
 			lobby.UserState,
 			func(value entity.UserState, key int64) ParticipantSerializer {
-				return NewParticipantSerializer(value, key, lobby.GameInfo.CurrentQuestion)
+				return NewParticipantSerializer(value, key, lobby.GameInfo.CorrectAnswers[key])
 			},
 		),
+		GameInfo: NewGameInfoSerializer(lobby),
+		Result:   NewResultSerializer(lobby),
 	}
 }
 
