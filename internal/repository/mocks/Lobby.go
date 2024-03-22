@@ -14,6 +14,36 @@ type Lobby struct {
 	mock.Mock
 }
 
+// AllIDs provides a mock function with given fields: ctx, prefix
+func (_m *Lobby) AllIDs(ctx context.Context, prefix string) ([]string, error) {
+	ret := _m.Called(ctx, prefix)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AllIDs")
+	}
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]string, error)); ok {
+		return rf(ctx, prefix)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []string); ok {
+		r0 = rf(ctx, prefix)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, prefix)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Get provides a mock function with given fields: ctx, id
 func (_m *Lobby) Get(ctx context.Context, id entity.ID) (entity.Lobby, error) {
 	ret := _m.Called(ctx, id)
@@ -79,6 +109,31 @@ func (_m *Lobby) MGet(ctx context.Context, ids ...entity.ID) ([]entity.Lobby, er
 	return r0, r1
 }
 
+// MSet provides a mock function with given fields: ctx, ents
+func (_m *Lobby) MSet(ctx context.Context, ents ...entity.Lobby) error {
+	_va := make([]interface{}, len(ents))
+	for _i := range ents {
+		_va[_i] = ents[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MSet")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, ...entity.Lobby) error); ok {
+		r0 = rf(ctx, ents...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Save provides a mock function with given fields: ctx, ent
 func (_m *Lobby) Save(ctx context.Context, ent entity.Lobby) error {
 	ret := _m.Called(ctx, ent)
@@ -90,6 +145,42 @@ func (_m *Lobby) Save(ctx context.Context, ent entity.Lobby) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, entity.Lobby) error); ok {
 		r0 = rf(ctx, ent)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SetField provides a mock function with given fields: ctx, id, fieldName, value
+func (_m *Lobby) SetField(ctx context.Context, id entity.ID, fieldName string, value interface{}) error {
+	ret := _m.Called(ctx, id, fieldName, value)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetField")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, entity.ID, string, interface{}) error); ok {
+		r0 = rf(ctx, id, fieldName, value)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateUserState provides a mock function with given fields: ctx, lobbyId, userId, key, val
+func (_m *Lobby) UpdateUserState(ctx context.Context, lobbyId string, userId int64, key string, val interface{}) error {
+	ret := _m.Called(ctx, lobbyId, userId, key, val)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateUserState")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int64, string, interface{}) error); ok {
+		r0 = rf(ctx, lobbyId, userId, key, val)
 	} else {
 		r0 = ret.Error(0)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
+	"kingscomp/internal/gameserver/events"
 	"kingscomp/internal/service"
 	"slices"
 	"time"
@@ -15,10 +16,10 @@ type Game struct {
 	app     *service.App
 	server  *GameServer
 	LobbyId entity.ID
-	Events  *Events
+	Events  events.Eventer
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	Ctx        context.Context
+	CancelFunc context.CancelFunc
 
 	lobby entity.Lobby
 }
@@ -29,17 +30,17 @@ func NewGame(lobbyId string, app *service.App, server *GameServer, config Config
 		LobbyId: entity.NewID("lobby", lobbyId),
 		app:     app,
 		server:  server,
-		Events:  NewEvents(),
+		Events:  events.NewInMemoryEvents(),
 	}
 }
 
 func (g *Game) Start(ctx context.Context) {
-	g.ctx, g.cancel = context.WithCancel(ctx)
+	g.Ctx, g.CancelFunc = context.WithCancel(ctx)
 	for {
 		g.loadLobby()
 
 		select {
-		case <-g.ctx.Done():
+		case <-g.Ctx.Done():
 			return
 		default:
 		}
@@ -78,8 +79,8 @@ func (g *Game) Start(ctx context.Context) {
 
 func (g *Game) created() error {
 	readyCh := make(chan int64)
-	cleanAny := g.Events.Register(EventAny, func(info EventInfo) {
-		if !info.IsType(EventUserReady, EventUserResigned) {
+	cleanAny, _ := g.Events.Register(events.EventAny, func(info events.EventInfo) {
+		if !info.IsType(events.EventUserReady, events.EventUserResigned) {
 			return
 		}
 		readyCh <- info.AccountID
@@ -87,17 +88,17 @@ func (g *Game) created() error {
 
 	defer cleanAny()
 
-	defer g.Events.Clean(EventJoinReminder)
-	defer g.Events.Clean(EventLateResign)
+	defer g.Events.Clean(events.EventJoinReminder)
+	defer g.Events.Clean(events.EventLateResign)
 	defer g.reloadClientLobbies()
 
 	noticeSent := false
 	deadline, cancel := context.WithTimeout(context.Background(), g.ReminderToReadyAfter)
 	for {
 		select {
-		case <-g.ctx.Done():
+		case <-g.Ctx.Done():
 			cancel()
-			return g.ctx.Err()
+			return g.Ctx.Err()
 		case _ = <-readyCh:
 			g.loadLobby()
 			if !g.lobby.EveryoneReady() {
@@ -120,7 +121,7 @@ func (g *Game) created() error {
 					if state.IsResigned || state.IsReady {
 						continue
 					}
-					g.Events.Dispatch(EventJoinReminder, EventInfo{AccountID: accountId})
+					g.Events.Dispatch(events.EventJoinReminder, events.EventInfo{AccountID: accountId})
 				}
 			} else {
 				for accountId, state := range g.lobby.UserState {
@@ -129,13 +130,13 @@ func (g *Game) created() error {
 					}
 					state.IsResigned = true
 					g.lobby.UserState[accountId] = state
-					if err := g.app.Account.SetField(g.ctx,
+					if err := g.app.Account.SetField(g.Ctx,
 						entity.NewID("account", accountId),
 						"current_lobby", ""); err != nil {
 						logrus.WithError(err).Errorln("couldn't save resigned user after timeout")
 					}
 					logrus.WithField("userId", accountId).Info("user late resigned")
-					g.Events.Dispatch(EventLateResign, EventInfo{AccountID: accountId})
+					g.Events.Dispatch(events.EventLateResign, events.EventInfo{AccountID: accountId})
 				}
 
 				g.lobby.State = "get-ready"
@@ -161,9 +162,9 @@ func (g *Game) getReady() error {
 }
 
 func (g *Game) started() error {
-	chUpdate := make(chan EventInfo, 10)
-	eCancel := g.Events.Register(EventAny, func(info EventInfo) {
-		if !info.IsType(EventUserAnswer, EventUserResigned) {
+	chUpdate := make(chan events.EventInfo, 10)
+	eCancel, _ := g.Events.Register(events.EventAny, func(info events.EventInfo) {
+		if !info.IsType(events.EventUserAnswer, events.EventUserResigned) {
 			return
 		}
 		chUpdate <- info
@@ -172,7 +173,7 @@ func (g *Game) started() error {
 
 	for {
 
-		timeout, cancel := context.WithTimeout(g.ctx,
+		timeout, cancel := context.WithTimeout(g.Ctx,
 			g.lobby.GameInfo.CurrentQuestionEndsAt.Sub(time.Now()))
 
 		if g.lobby.State == "ended" {
@@ -181,13 +182,13 @@ func (g *Game) started() error {
 		}
 
 		select {
-		case <-g.ctx.Done():
+		case <-g.Ctx.Done():
 			cancel()
 			return nil
 		case info := <-chUpdate: // one user has made their answer
 			g.loadLobby()
 			switch info.Type {
-			case EventUserResigned:
+			case events.EventUserResigned:
 				//todo: check if all users have answered except the resigned user
 				accountId := info.AccountID
 				if !slices.Contains(g.lobby.Participants, accountId) {
@@ -202,7 +203,7 @@ func (g *Game) started() error {
 				g.lobby.UserState[accountId] = userState
 				g.saveLobby()
 				g.reloadClientLobbies()
-			case EventUserAnswer:
+			case events.EventUserAnswer:
 				accountId := info.AccountID
 				answerIndex := info.UserAnswer
 				questionIndex := info.QuestionIndex
@@ -256,24 +257,24 @@ func (g *Game) nextQuestion() {
 }
 
 func (g *Game) reloadClientLobbies() {
-	g.Events.Dispatch(EventForceLobbyReload, EventInfo{})
+	g.Events.Dispatch(events.EventForceLobbyReload, events.EventInfo{})
 }
 
 func (g *Game) loadLobby() {
-	lobby, err := g.app.Lobby.Get(g.ctx, g.LobbyId)
+	lobby, err := g.app.Lobby.Get(g.Ctx, g.LobbyId)
 	if err != nil {
 		logrus.WithError(err).WithField("id", g.LobbyId.ID()).Errorln("couldn't load the game's lobby")
-		g.cancel()
+		g.CancelFunc()
 		return
 	}
 	g.lobby = lobby
 }
 
 func (g *Game) saveLobby() {
-	err := g.app.Lobby.Save(g.ctx, g.lobby)
+	err := g.app.Lobby.Save(g.Ctx, g.lobby)
 	if err != nil {
 		logrus.WithError(err).WithField("id", g.LobbyId.ID()).Errorln("couldn't load the game's lobby")
-		g.cancel()
+		g.CancelFunc()
 		return
 	}
 }
@@ -281,10 +282,10 @@ func (g *Game) saveLobby() {
 func (g *Game) close() {
 	for userId, state := range g.lobby.UserState {
 		if !state.IsResigned {
-			g.Events.Dispatch(EventGameClosed, EventInfo{AccountID: userId})
+			g.Events.Dispatch(events.EventGameClosed, events.EventInfo{AccountID: userId})
 		}
 	}
 	<-time.After(1 * time.Second)
-	g.Events.close()
-	g.cancel()
+	g.Events.Close()
+	g.CancelFunc()
 }

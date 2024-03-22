@@ -1,4 +1,4 @@
-package gameserver
+package events
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -7,18 +7,18 @@ import (
 )
 
 func TestEvents_DispatchAndRegister(t *testing.T) {
-	e := NewEvents()
+	e := NewInMemoryEvents()
 	var wg sync.WaitGroup
 	wg.Add(3)
-	c1 := e.Register(EventUserReady, func(info EventInfo) {
+	c1, _ := e.Register(EventUserReady, func(info EventInfo) {
 		assert.Equal(t, info.AccountID, int64(1))
 		wg.Done()
 	})
-	c2 := e.Register(EventUserReady, func(info EventInfo) {
+	c2, _ := e.Register(EventUserReady, func(info EventInfo) {
 		assert.Equal(t, info.AccountID, int64(1))
 		wg.Done()
 	})
-	c3 := e.Register(EventAny, func(info EventInfo) {
+	c3, _ := e.Register(EventAny, func(info EventInfo) {
 		assert.Equal(t, info.Type, EventUserReady)
 		assert.Equal(t, info.AccountID, int64(1))
 		wg.Done()
@@ -29,13 +29,13 @@ func TestEvents_DispatchAndRegister(t *testing.T) {
 	})
 	wg.Wait()
 
-	assert.Equal(t, 2, e.ListenerCount(EventUserReady))
+	assert.Equal(t, 2, e.listenerCount(EventUserReady))
 	c1()
-	assert.Equal(t, 1, e.ListenerCount(EventUserReady))
+	assert.Equal(t, 1, e.listenerCount(EventUserReady))
 	c2()
-	assert.Equal(t, 0, e.ListenerCount(EventUserReady))
+	assert.Equal(t, 0, e.listenerCount(EventUserReady))
 	c3()
-	assert.Equal(t, 0, e.ListenerCount(EventAny))
+	assert.Equal(t, 0, e.listenerCount(EventAny))
 
 	wg = sync.WaitGroup{}
 	wg.Add(2)
@@ -55,7 +55,7 @@ func TestEvents_DispatchAndRegister(t *testing.T) {
 	})
 	wg.Wait()
 
-	assert.Equal(t, 2, e.ListenerCount(EventUserReady))
+	assert.Equal(t, 2, e.listenerCount(EventUserReady))
 	e.Clean(EventUserReady)
-	assert.Equal(t, 0, e.ListenerCount(EventUserReady))
+	assert.Equal(t, 0, e.listenerCount(EventUserReady))
 }

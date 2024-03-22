@@ -5,7 +5,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
-	"kingscomp/internal/gameserver"
+	"kingscomp/internal/gameserver/events"
 	"strconv"
 )
 
@@ -122,7 +122,7 @@ type EventSerializer struct {
 	Account   AccountSerializer `json:"account,omitempty"`
 }
 
-func NewEventSerializer(info gameserver.EventInfo) EventSerializer {
+func NewEventSerializer(info events.EventInfo) EventSerializer {
 	return EventSerializer{
 		Type:      info.Type.Type(),
 		AccountID: info.AccountID,
@@ -158,7 +158,7 @@ type EventResponseSerializer struct {
 	Hash  string          `json:"hash"`
 }
 
-func NewEventResponseSerializer(lobby entity.Lobby, info gameserver.EventInfo, hash string) EventResponseSerializer {
+func NewEventResponseSerializer(lobby entity.Lobby, info events.EventInfo, hash string) EventResponseSerializer {
 	return EventResponseSerializer{
 		Lobby: NewLobbySerializer(lobby),
 		Event: NewEventSerializer(info),

@@ -42,6 +42,7 @@ func (s *MatchmakingTestSuite) SetupSuite() {
 		redisClient,
 		lr,
 		qr,
+		ar,
 	)
 	err = qr.PushActiveQuestion(s.ctx,
 		entity.Question{ID: "1"},

@@ -3,7 +3,7 @@ package webapp
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"kingscomp/internal/gameserver"
+	"kingscomp/internal/gameserver/events"
 	"kingscomp/internal/webapp/views/pages"
 	"time"
 )
@@ -27,7 +27,7 @@ func (w *WebApp) lobbyReady(c echo.Context) error {
 
 	game, err := w.gs.Game(lobby.ID)
 	if err == nil {
-		game.Events.Dispatch(gameserver.EventUserReady, gameserver.EventInfo{Account: account, AccountID: account.ID})
+		game.Events.Dispatch(events.EventUserReady, events.EventInfo{Account: account, AccountID: account.ID})
 	}
 
 	return c.JSON(200, ResponseOk(200, NewFullAccountSerializer(account)))
@@ -49,7 +49,7 @@ func (w *WebApp) lobbyAnswer(c echo.Context) error {
 
 	game, err := w.gs.Game(lobby.ID)
 	if err == nil {
-		game.Events.Dispatch(gameserver.EventUserAnswer, gameserver.EventInfo{
+		game.Events.Dispatch(events.EventUserAnswer, events.EventInfo{
 			Account:       account,
 			AccountID:     account.ID,
 			QuestionIndex: request.Index,
@@ -76,8 +76,8 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 	game := w.gs.MustGame(lobby.ID)
 
 	ch := make(chan EventResponseSerializer, 1)
-	cancel := game.Events.Register(gameserver.EventAny, func(info gameserver.EventInfo) {
-		if !info.IsType(gameserver.EventForceLobbyReload) {
+	cancel, _ := game.Events.Register(events.EventAny, func(info events.EventInfo) {
+		if !info.IsType(events.EventForceLobbyReload) {
 			return
 		}
 		logrus.WithField("lobbyId", lobby.ID).Info("lobby event update")
@@ -107,7 +107,7 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 					"userHash": request.Hash,
 					"hash":     h,
 				}).Info("user event info by hash")
-			return c.JSON(200, ResponseOk(200, NewEventResponseSerializer(lobby, gameserver.EventInfo{}, h)))
+			return c.JSON(200, ResponseOk(200, NewEventResponseSerializer(lobby, events.EventInfo{}, h)))
 		}
 	}
 
@@ -120,6 +120,6 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 			return err
 		}
 		h, _ := Hash(lobby)
-		return c.JSON(200, ResponseOk(200, NewEventResponseSerializer(lobby, gameserver.EventInfo{}, h)))
+		return c.JSON(200, ResponseOk(200, NewEventResponseSerializer(lobby, events.EventInfo{}, h)))
 	}
 }

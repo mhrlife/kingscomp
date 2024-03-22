@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/exp/maps"
 	"kingscomp/internal/entity"
+	events2 "kingscomp/internal/gameserver/events"
 	"kingscomp/internal/repository"
 	"kingscomp/internal/service"
 	"sync"
@@ -218,7 +219,7 @@ func (s *GameServerTestSuite) TestJoinResignedNotification() {
 func (s *GameServerTestSuite) TestTimeoutResignedNotification() {
 	s.ready(1)
 	events := int32(0)
-	c := s.game.Events.Register(EventLateResign, func(info EventInfo) {
+	c, _ := s.game.Events.Register(events2.EventLateResign, func(info events2.EventInfo) {
 		atomic.AddInt32(&events, 1)
 	})
 	defer c()
@@ -231,7 +232,7 @@ func (s *GameServerTestSuite) TestMidGameResignedNotification() {
 	s.ready(1)
 	s.ready(2)
 	events := int32(0)
-	c := s.game.Events.Register(EventUserResigned, func(info EventInfo) {
+	c, _ := s.game.Events.Register(events2.EventUserResigned, func(info events2.EventInfo) {
 		atomic.AddInt32(&events, 1)
 	})
 
@@ -254,7 +255,7 @@ func (s *GameServerTestSuite) TestAnswerQuestionAnswer() {
 	assert.Equal(s.T(), "started", s.game.lobby.State)
 	assert.Equal(s.T(), 0, s.game.lobby.GameInfo.CurrentQuestion)
 	// this is a bad question index, must be 1
-	s.game.Events.Dispatch(EventUserAnswer, EventInfo{
+	s.game.Events.Dispatch(events2.EventUserAnswer, events2.EventInfo{
 		AccountID:     1,
 		QuestionIndex: 1,
 		UserAnswer:    1,
@@ -262,7 +263,7 @@ func (s *GameServerTestSuite) TestAnswerQuestionAnswer() {
 	<-time.After(time.Millisecond)
 	assert.Len(s.T(), s.game.lobby.GameInfo.CorrectAnswers, 0)
 	// this is a correct question index
-	s.game.Events.Dispatch(EventUserAnswer, EventInfo{
+	s.game.Events.Dispatch(events2.EventUserAnswer, events2.EventInfo{
 		AccountID:     1,
 		QuestionIndex: 0,
 		UserAnswer:    1,
@@ -303,12 +304,13 @@ func (s *GameServerTestSuite) TestLobbyEnded() {
 
 	<-time.After(time.Millisecond * 10)
 	assert.Equal(s.T(), "ended", s.game.lobby.State)
-	assert.ErrorIs(s.T(), context.Canceled, s.game.ctx.Err())
+	<-time.After(time.Second)
+	assert.ErrorIs(s.T(), context.Canceled, s.game.Ctx.Err())
 
 }
 
 func (s *GameServerTestSuite) answer(question, answer int, accountId int64) {
-	s.game.Events.Dispatch(EventUserAnswer, EventInfo{
+	s.game.Events.Dispatch(events2.EventUserAnswer, events2.EventInfo{
 		AccountID:     accountId,
 		QuestionIndex: question,
 		UserAnswer:    answer,
@@ -317,10 +319,10 @@ func (s *GameServerTestSuite) answer(question, answer int, accountId int64) {
 
 func (s *GameServerTestSuite) ready(userId int64) {
 	s.lobbies.UpdateUserState(context.Background(), s.lobbyId, userId, "isReady", true)
-	s.game.Events.Dispatch(EventUserReady, EventInfo{AccountID: userId})
+	s.game.Events.Dispatch(events2.EventUserReady, events2.EventInfo{AccountID: userId})
 }
 
 func (s *GameServerTestSuite) resign(userId int64) {
 	s.lobbies.UpdateUserState(context.Background(), s.lobbyId, userId, "isResigned", true)
-	s.game.Events.Dispatch(EventUserResigned, EventInfo{AccountID: userId})
+	s.game.Events.Dispatch(events2.EventUserResigned, events2.EventInfo{AccountID: userId})
 }

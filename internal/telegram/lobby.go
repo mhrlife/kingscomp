@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"gopkg.in/telebot.v3"
 	"kingscomp/internal/entity"
-	"kingscomp/internal/gameserver"
+	"kingscomp/internal/gameserver/events"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"
 	"strings"
@@ -83,18 +83,18 @@ loading:
 			return err
 		}
 
-		game.Events.Register(gameserver.EventJoinReminder, func(info gameserver.EventInfo) {
+		game.Events.Register(events.EventJoinReminder, func(info events.EventInfo) {
 			c.Bot().Send(&telebot.User{ID: info.AccountID},
 				`⚠️ بازی جدید برای شما ساخته شده اما هنوز بازی را باز نکرده اید! تا چند ثانیه دیگر اگر بازی را باز نکنید تسلیم شده در نظر گرفته میشوید.`,
 				NewLobbyInlineKeyboards(lobby.ID))
 		})
 
-		game.Events.Register(gameserver.EventLateResign, func(info gameserver.EventInfo) {
+		game.Events.Register(events.EventLateResign, func(info events.EventInfo) {
 			c.Bot().Send(&telebot.User{ID: info.AccountID},
 				`😔 متاسفانه چون وارد بازی جدید نشدید مجبور شدیم وضعیتتون رو به «تسلیم شده» تغییر بدیم.`)
 		})
 
-		game.Events.Register(gameserver.EventGameClosed, func(info gameserver.EventInfo) {
+		game.Events.Register(events.EventGameClosed, func(info events.EventInfo) {
 			c.Bot().Send(&telebot.User{ID: info.AccountID}, `🎲 بازی با موفقیت به اتمام رسید. خسته نباشید.
 
 اگه میخواید ربات رو استارت کنید یا بازی جدیدی شروع کنید روی /home کلیک کنید.`)
@@ -169,7 +169,7 @@ func (t *Telegram) resignLobby(c telebot.Context) error {
 	t.App.Lobby.UpdateUserState(context.Background(),
 		myLobby, myAccount.ID, "isResigned", true)
 
-	t.gs.MustGame(myLobby).Events.Dispatch(gameserver.EventUserResigned, gameserver.EventInfo{
+	t.gs.MustGame(myLobby).Events.Dispatch(events.EventUserResigned, events.EventInfo{
 		AccountID: myAccount.ID,
 	})
 
