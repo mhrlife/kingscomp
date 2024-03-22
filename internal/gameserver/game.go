@@ -153,7 +153,7 @@ func (g *Game) getReady() error {
 
 	<-time.After(g.GetReadyDuration)
 	g.lobby.State = "started"
-	g.lobby.GameInfo.CorrectAnswers = make(map[int64][]bool)
+	g.lobby.GameInfo.CorrectAnswers = make(map[int64][]entity.Answer)
 	g.lobby.GameInfo.CurrentQuestion = 0
 	g.lobby.GameInfo.CurrentQuestionStartedAt = time.Now()
 	g.lobby.GameInfo.CurrentQuestionEndsAt = time.Now().Add(g.Config.QuestionTimeout)
@@ -216,7 +216,11 @@ func (g *Game) started() error {
 					continue
 				}
 
-				answer := g.lobby.Questions[questionIndex].CorrectAnswer == answerIndex
+				isCorrect := g.lobby.Questions[questionIndex].CorrectAnswer == answerIndex
+				answer := entity.Answer{
+					Correct:  isCorrect,
+					Duration: time.Since(g.lobby.GameInfo.CurrentQuestionStartedAt),
+				}
 				g.lobby.GameInfo.CorrectAnswers[accountId] = append(g.lobby.GameInfo.CorrectAnswers[accountId], answer)
 				userState := g.lobby.UserState[accountId]
 				userState.LastAnsweredQuestionIndex = questionIndex
@@ -232,7 +236,8 @@ func (g *Game) started() error {
 		case <-timeout.Done(): // timeout 30s, finding user's didn't answer
 			notAnsweredUsers := g.lobby.NotAnsweredUsers()
 			for _, userId := range notAnsweredUsers {
-				g.lobby.GameInfo.CorrectAnswers[userId] = append(g.lobby.GameInfo.CorrectAnswers[userId], false)
+				g.lobby.GameInfo.CorrectAnswers[userId] = append(g.lobby.GameInfo.CorrectAnswers[userId],
+					entity.Answer{Correct: false, Duration: time.Since(g.lobby.GameInfo.CurrentQuestionStartedAt)})
 			}
 			g.nextQuestion()
 		}

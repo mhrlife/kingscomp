@@ -270,18 +270,18 @@ func (s *GameServerTestSuite) TestAnswerQuestionAnswer() {
 	})
 	<-time.After(time.Millisecond * 5)
 	assert.Len(s.T(), s.game.lobby.GameInfo.CorrectAnswers, 1)
-	assert.True(s.T(), s.game.lobby.GameInfo.CorrectAnswers[1][0])
+	assert.True(s.T(), s.game.lobby.GameInfo.CorrectAnswers[1][0].Correct)
 	// user 2 didn't answer, check if it has automatically got false
 	<-time.After(time.Millisecond * 100)
 	assert.Len(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2], 1)
-	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2][0])
+	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2][0].Correct)
 	// both didn't answer the second question
 	<-time.After(time.Millisecond * 100)
 	assert.Equal(s.T(), 2, s.game.lobby.GameInfo.CurrentQuestion)
 	assert.Len(s.T(), s.game.lobby.GameInfo.CorrectAnswers[1], 2)
 	assert.Len(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2], 2)
-	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[1][1])
-	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2][1])
+	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[1][1].Correct)
+	assert.False(s.T(), s.game.lobby.GameInfo.CorrectAnswers[2][1].Correct)
 }
 
 func (s *GameServerTestSuite) TestLobbyEnded() {

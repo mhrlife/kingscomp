@@ -14,10 +14,15 @@ type UserState struct {
 	DisplayName               string `json:"displayName"`
 }
 type GameInfo struct {
-	CurrentQuestion          int              `json:"currentQuestion"`
-	CurrentQuestionStartedAt time.Time        `json:"currentQuestionStartedAt"`
-	CurrentQuestionEndsAt    time.Time        `json:"CurrentQuestionEndsAt"`
-	CorrectAnswers           map[int64][]bool `json:"correctAnswers"`
+	CurrentQuestion          int                `json:"currentQuestion"`
+	CurrentQuestionStartedAt time.Time          `json:"currentQuestionStartedAt"`
+	CurrentQuestionEndsAt    time.Time          `json:"CurrentQuestionEndsAt"`
+	CorrectAnswers           map[int64][]Answer `json:"correctAnswers"`
+}
+
+type Answer struct {
+	Correct  bool          `json:"correct"`
+	Duration time.Duration `json:"duration"`
 }
 
 type Lobby struct {

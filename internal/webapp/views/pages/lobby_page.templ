@@ -74,8 +74,8 @@ templ LobbyPage(lobbyId string){
                                         <template x-if="!!participant.history.answerHistory"
                                                   x-for="answer in participant.history.answerHistory">
                                             <p style="padding-left: 4px;">
-                                                <i x-show="answer" class="gg-check-o"></i>
-                                                <i x-show="!answer" class="gg-radio-check"></i>
+                                                <i x-show="answer.correct" class="gg-check-o"></i>
+                                                <i x-show="!answer.correct" class="gg-radio-check"></i>
                                             </p>
                                         </template>
                                     </div>
@@ -101,6 +101,25 @@ templ LobbyPage(lobbyId string){
                             </strong>
                             امتیاز کسب کرد
                         </h4>
+                        <div style="width: 100%">
+                            <div class="active-users" style="width: 100%">
+                                <template x-for="(item, index) in $store.lobby.currentLobby.result.leaderboard">
+                                    <div style="overflow: hidden;margin-top: 5px" class="box-with-border flex-row">
+                                        <p>
+                                            <span x-text="'#'+(index+1)"></span>
+                                        <strong x-text="item.displayName"></strong>
+                                        </p>
+                                        <strong x-text="item.score">
+
+                                        </strong>
+                                    </div>
+                                </template>
+                            </div>
+                            <em class="hint" style="font-size: 12px">سرعت پاسخدهی در امتیاز شما نیز تاثیر میگذارد</em>
+                            <div style="margin-top: 20px">
+                                <button class="tg-button-bordered" style="width: 100%" @click.prevent="WebApp.close()">بستن بازی</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </template>

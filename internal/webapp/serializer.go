@@ -6,11 +6,24 @@ import (
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/gameserver/events"
+	"sort"
 	"strconv"
 )
 
+type AnswerSerializer struct {
+	Correct bool `json:"correct"`
+	Took    int  `json:"took"` // in seconds
+}
+
+func NewAnswerSerializer(answer entity.Answer) AnswerSerializer {
+	return AnswerSerializer{
+		Correct: answer.Correct,
+		Took:    int(answer.Duration.Seconds()),
+	}
+}
+
 type ParticipantAnswerHistory struct {
-	AnswerHistory []bool `json:"answerHistory"`
+	AnswerHistory []AnswerSerializer `json:"answerHistory"`
 }
 type ParticipantSerializer struct {
 	ID          int64                    `json:"id"`
@@ -20,9 +33,9 @@ type ParticipantSerializer struct {
 	History     ParticipantAnswerHistory `json:"history"`
 }
 
-func NewParticipantSerializer(state entity.UserState, id int64, answers []bool) ParticipantSerializer {
+func NewParticipantSerializer(state entity.UserState, id int64, answers []entity.Answer) ParticipantSerializer {
 	if answers == nil {
-		answers = make([]bool, 0)
+		answers = make([]entity.Answer, 0)
 	}
 	return ParticipantSerializer{
 		ID:          id,
@@ -30,7 +43,9 @@ func NewParticipantSerializer(state entity.UserState, id int64, answers []bool) 
 		IsReady:     state.IsReady,
 		IsResigned:  state.IsResigned,
 		History: ParticipantAnswerHistory{
-			AnswerHistory: answers,
+			AnswerHistory: lo.Map(answers, func(item entity.Answer, _ int) AnswerSerializer {
+				return NewAnswerSerializer(item)
+			}),
 		},
 	}
 }
@@ -68,29 +83,48 @@ func NewGameInfoSerializer(lobby entity.Lobby) GameInfoSerializer {
 	return gameInfoSerialized
 }
 
+type LeaderboardItem struct {
+	DisplayName string `json:"displayName"`
+	Score       int    `json:"score"`
+}
 type ResultSerializer struct {
-	Winner      string `json:"winner"`
-	WinnerScore int    `json:"winnerScore"`
+	Winner      string            `json:"winner"`
+	WinnerScore int               `json:"winnerScore"`
+	Leaderboard []LeaderboardItem `json:"leaderboard"`
 }
 
 // NewResultSerializer todo: fix winning condition
 func NewResultSerializer(lobby entity.Lobby) ResultSerializer {
 	winnerName := ""
 	winnerScore := 0
-
+	var leaderboard []LeaderboardItem
 	for _, accountId := range lobby.Participants {
-		score := lo.Reduce(lobby.GameInfo.CorrectAnswers[accountId], func(agg int, item bool, _ int) int {
-			if item {
-				agg++
+		score := lo.Reduce(lobby.GameInfo.CorrectAnswers[accountId], func(agg int, item entity.Answer, i int) int {
+			if !item.Correct {
+				return agg
 			}
+			agg += 100 // for correct answer
+			questionDuration := lobby.GameInfo.CurrentQuestionEndsAt.Sub(lobby.GameInfo.CurrentQuestionStartedAt).Seconds()
+
+			agg += 50 - int(item.Duration.Seconds()/questionDuration*50) // for sooner answers
 			return agg
 		}, 0)
 		if score >= winnerScore {
 			winnerName = lobby.UserState[accountId].DisplayName
 			winnerScore = score
 		}
+
+		leaderboard = append(leaderboard, LeaderboardItem{
+			DisplayName: lobby.UserState[accountId].DisplayName,
+			Score:       score,
+		})
+
 	}
-	return ResultSerializer{Winner: winnerName, WinnerScore: winnerScore}
+
+	sort.Slice(leaderboard, func(i, j int) bool {
+		return leaderboard[i].Score > leaderboard[j].Score
+	})
+	return ResultSerializer{Winner: winnerName, WinnerScore: winnerScore, Leaderboard: leaderboard}
 }
 
 type LobbySerializer struct {
