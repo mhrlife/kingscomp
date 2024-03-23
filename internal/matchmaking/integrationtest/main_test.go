@@ -13,7 +13,7 @@ var redisPort string
 
 func TestMain(m *testing.M) {
 	if !testhelper.IsIntegration() {
-		return
+		os.Exit(0)
 	}
 
 	pool := testhelper.StartDockerPool()

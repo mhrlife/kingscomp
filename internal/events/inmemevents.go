@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"sync"
@@ -23,7 +24,11 @@ func NewInMemoryEvents() *InMemoryEvents {
 func (e *InMemoryEvents) Dispatch(t EventType, info EventInfo) error {
 	info.Type = t
 	e.mu.RLock()
-	listeners := append(e.listeners[t], e.listeners[EventAny]...)
+	var add []Listener
+	if !info.IsType(EventAny) {
+		add = append(add, e.listeners[EventAny]...)
+	}
+	listeners := append(e.listeners[t], add...)
 	for _, listener := range listeners {
 		go listener.callback(info)
 	}
@@ -74,10 +79,41 @@ func (e *InMemoryEvents) Register(t EventType, callback Callback) (func() int, e
 			return uid != item.uuid
 		})
 		l := len(e.listeners[t])
-		if l == 0 {
-			e.Close()
-		}
 		return l
 
 	}, nil
+}
+
+var _ PubSub = &InMemPubSub{}
+
+type InMemPubSub struct {
+	keys sync.Map
+}
+
+func NewInMemPubSub() *InMemPubSub {
+	return &InMemPubSub{}
+}
+
+func (i *InMemPubSub) Dispatch(ctx context.Context, key string, t EventType, info EventInfo) error {
+	iInMem, _ := i.keys.LoadOrStore(key, NewInMemoryEvents())
+	return iInMem.(*InMemoryEvents).Dispatch(t, info)
+}
+
+func (i *InMemPubSub) Register(key string, t EventType, callback Callback) (func(), error) {
+	iInMem, _ := i.keys.LoadOrStore(key, NewInMemoryEvents())
+	cancel, _ := iInMem.(*InMemoryEvents).Register(t, callback)
+	return func() {
+		if cancel() == 0 {
+			i.keys.Delete(key)
+		}
+	}, nil
+}
+
+func (i *InMemPubSub) Clean(key string, t EventType) error {
+	iInMem, _ := i.keys.LoadOrStore(key, NewInMemoryEvents())
+	return iInMem.(*InMemoryEvents).Clean(t)
+}
+
+func (i *InMemPubSub) Close() error {
+	return nil
 }

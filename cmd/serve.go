@@ -6,12 +6,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	_ "go.uber.org/automaxprocs"
+	"kingscomp/internal/config"
+	"kingscomp/internal/events"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"
 	"kingscomp/internal/repository/redis"
 	"kingscomp/internal/service"
 	"kingscomp/internal/telegram"
+	"kingscomp/internal/telegram/teleprompt"
 	"kingscomp/internal/webapp"
 	"os"
 	"os/signal"
@@ -30,6 +33,9 @@ func serve(_ *cobra.Command, _ []string) {
 	if os.Getenv("ENV") != "local" {
 		logrus.SetLevel(logrus.ErrorLevel)
 	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	// set up repositories
 	redisClient, err := redis.NewRedisClient(os.Getenv("REDIS_URL"))
 	if err != nil {
@@ -44,20 +50,32 @@ func serve(_ *cobra.Command, _ []string) {
 		service.NewLobbyService(lobbyRepository),
 	)
 
-	mm := matchmaking.NewRedisMatchmaking(redisClient, lobbyRepository, questionRepository, accountRepository)
-	gs := gameserver.NewGameServer(app, gameserver.DefaultGameServerConfig())
+	mm := matchmaking.NewRedisMatchmaking(
+		redisClient,
+		lobbyRepository,
+		questionRepository,
+		accountRepository,
+	)
+	gs := gameserver.NewGameServer(
+		app,
+		events.NewRedisPubSub(ctx, redisClient, "lobby.*"),
+		gameserver.DefaultGameServerConfig(),
+	)
 
-	tg, err := telegram.NewTelegram(app, mm, gs, os.Getenv("BOT_API"))
+	tg, err := telegram.NewTelegram(
+		app,
+		mm,
+		gs,
+		teleprompt.NewTelePrompt(ctx, redisClient),
+		config.Default.BotToken,
+	)
 	if err != nil {
 		logrus.WithError(err).Fatalln("couldn't connect to the telegram server")
 	}
 
 	go tg.Start()
 
-	wa := webapp.NewWebApp(app, gs, ":8080")
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
+	wa := webapp.NewWebApp(app, gs, ":8080", tg.Bot)
 
 	if os.Getenv("ENV") == "local" {
 		go func() {

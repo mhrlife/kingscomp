@@ -27,7 +27,7 @@ func (w *WebApp) lobbyReady(c echo.Context) error {
 
 	game, err := w.gs.Game(lobby.ID)
 	if err == nil {
-		game.Events.Dispatch(events.EventUserReady, events.EventInfo{Account: account, AccountID: account.ID})
+		game.Events.Dispatch(c.Request().Context(), "lobby."+lobby.ID, events.EventUserReady, events.EventInfo{Account: account, AccountID: account.ID})
 	}
 
 	return c.JSON(200, ResponseOk(200, NewFullAccountSerializer(account)))
@@ -49,7 +49,7 @@ func (w *WebApp) lobbyAnswer(c echo.Context) error {
 
 	game, err := w.gs.Game(lobby.ID)
 	if err == nil {
-		game.Events.Dispatch(events.EventUserAnswer, events.EventInfo{
+		game.Events.Dispatch(c.Request().Context(), "lobby."+lobby.ID, events.EventUserAnswer, events.EventInfo{
 			Account:       account,
 			AccountID:     account.ID,
 			QuestionIndex: request.Index,
@@ -76,7 +76,7 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 	game := w.gs.MustGame(lobby.ID)
 
 	ch := make(chan EventResponseSerializer, 1)
-	cancel, _ := game.Events.Register(events.EventAny, func(info events.EventInfo) {
+	cancel, _ := game.Events.Register("lobby."+lobby.ID, events.EventAny, func(info events.EventInfo) {
 		if !info.IsType(events.EventForceLobbyReload) {
 			return
 		}
@@ -90,6 +90,11 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 		ch <- NewEventResponseSerializer(lobby, info, h)
 	})
 	defer cancel()
+
+	lobby, err := w.App.Lobby.Get(c.Request().Context(), lobby.EntityID())
+	if err != nil {
+		return err
+	}
 
 	// this part only works if the client sends a hash
 	var request lobbyEventRequest

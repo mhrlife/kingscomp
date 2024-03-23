@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/redis/rueidis"
 	"github.com/sirupsen/logrus"
 	"kingscomp/pkg/jsonhelper"
@@ -23,7 +24,7 @@ type RedisPubSub struct {
 	keys sync.Map
 }
 
-//var _ PubSub = &RedisPubSub{}
+var _ PubSub = &RedisPubSub{}
 
 func NewRedisPubSub(ctx context.Context, client rueidis.Client, pattern string) *RedisPubSub {
 	ctx, cancelFunc := context.WithCancel(ctx)
@@ -45,21 +46,24 @@ func (r *RedisPubSub) Dispatch(ctx context.Context, key string, t EventType, inf
 	cmd := r.client.B().Publish().Channel(key).Message(
 		string(jsonhelper.Encode(info)),
 	).Build()
-	return r.client.Do(ctx, cmd).Error()
+	err := r.client.Do(ctx, cmd).Error()
+	if err != nil {
+		logrus.WithError(err).Errorln("couldn't dispatch pub/sub message")
+		return err
+	}
+	return nil
 }
 
 func (r *RedisPubSub) Register(key string, t EventType, callback Callback) (func(), error) {
 	iInMem, _ := r.keys.LoadOrStore(key, NewInMemoryEvents())
 	inMem := iInMem.(*InMemoryEvents)
 	clean, err := inMem.Register(t, callback)
+	fmt.Println(t.Type(), inMem)
 	if err != nil {
 		return nil, err
 	}
 	return func() {
-		l := clean()
-		if l == 0 {
-			r.keys.Delete(key)
-		}
+		clean()
 	}, nil
 }
 
@@ -73,6 +77,14 @@ func (r *RedisPubSub) listen() {
 				return
 			}
 			eventInfo := jsonhelper.Decode[EventInfo]([]byte(msg.Message))
+
+			logrus.WithFields(logrus.Fields{
+				"key":      msg.Channel,
+				"type":     eventInfo.Type.Type(),
+				"type_num": eventInfo.Type,
+				"userId":   eventInfo.AccountID,
+			}).Infoln("new pub/sub message recieved")
+
 			if err := iInMem.(*InMemoryEvents).Dispatch(eventInfo.Type, eventInfo); err != nil {
 				logrus.WithError(err).WithFields(logrus.Fields{
 					"msg": msg,
@@ -95,4 +107,13 @@ func (r *RedisPubSub) Close() error {
 	}
 	r.closeClient()
 	return nil
+}
+
+func (r *RedisPubSub) Clean(key string, t EventType) error {
+	iInMem, ok := r.keys.Load(key)
+	if !ok {
+		return nil
+	}
+	inMem := iInMem.(*InMemoryEvents)
+	return inMem.Clean(t)
 }

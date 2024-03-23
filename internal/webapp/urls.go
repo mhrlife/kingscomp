@@ -23,6 +23,9 @@ func (w *WebApp) urls() {
 
 	auth := w.e.Group("/auth")
 	auth.POST("/validate", w.validateInitData, w.authorize)
+
+	webhook := w.e.Group("/webhook")
+	webhook.POST("/:token", w.webhook)
 }
 
 func (w *WebApp) authorize(next echo.HandlerFunc) echo.HandlerFunc {
