@@ -169,7 +169,7 @@ func (t *Telegram) resignLobby(c telebot.Context) error {
 	t.App.Lobby.UpdateUserState(context.Background(),
 		myLobby, myAccount.ID, "isResigned", true)
 
-	t.gs.MustGame(myLobby).Events.Dispatch(
+	t.gs.PubSub.Dispatch(
 		context.Background(),
 		"lobby."+myLobby,
 		events.EventUserResigned,

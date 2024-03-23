@@ -31,7 +31,7 @@ func NewGame(lobbyId string, app *service.App, server *GameServer, config Config
 		LobbyId: entity.NewID("lobby", lobbyId),
 		app:     app,
 		server:  server,
-		Events:  server.pubSub,
+		Events:  server.PubSub,
 	}
 }
 

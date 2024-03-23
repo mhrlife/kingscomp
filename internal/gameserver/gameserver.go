@@ -26,7 +26,7 @@ type GameServer struct {
 	ctx       context.Context
 	cancelCtx context.CancelFunc
 
-	pubSub events.PubSub
+	PubSub events.PubSub
 }
 
 type Config struct {
@@ -54,7 +54,7 @@ func NewGameServer(app *service.App, lobbyPubSub events.PubSub, config Config) *
 		Config:    config,
 		ctx:       ctx,
 		cancelCtx: cancel,
-		pubSub:    lobbyPubSub,
+		PubSub:    lobbyPubSub,
 	}
 	if err := gs.StartupGameServers(context.Background()); err != nil {
 		logrus.WithError(err).Errorln("couldn't start up game servers")
@@ -114,7 +114,7 @@ func (g *GameServer) StartupGameServers(ctx context.Context) error {
 		if lobby.State == "ended" || lobby.CreatedAtUnix < time.Now().Add(-g.LobbyAge).Unix() {
 			continue
 		}
-		g.MustGame(lobby.ID)
+		//g.MustGame(lobby.ID)
 		logrus.WithField("lobbyId", lobby.ID).Info("lobby instantiated.")
 	}
 

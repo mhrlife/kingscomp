@@ -25,9 +25,13 @@ func (w *WebApp) lobbyReady(c echo.Context) error {
 		return err
 	}
 
-	game, err := w.gs.Game(lobby.ID)
-	if err == nil {
-		game.Events.Dispatch(c.Request().Context(), "lobby."+lobby.ID, events.EventUserReady, events.EventInfo{Account: account, AccountID: account.ID})
+	if err := w.gs.PubSub.Dispatch(
+		c.Request().Context(),
+		"lobby."+lobby.ID,
+		events.EventUserReady,
+		events.EventInfo{Account: account, AccountID: account.ID},
+	); err != nil {
+		return err
 	}
 
 	return c.JSON(200, ResponseOk(200, NewFullAccountSerializer(account)))
@@ -47,14 +51,13 @@ func (w *WebApp) lobbyAnswer(c echo.Context) error {
 		return err
 	}
 
-	game, err := w.gs.Game(lobby.ID)
-	if err == nil {
-		game.Events.Dispatch(c.Request().Context(), "lobby."+lobby.ID, events.EventUserAnswer, events.EventInfo{
-			Account:       account,
-			AccountID:     account.ID,
-			QuestionIndex: request.Index,
-			UserAnswer:    request.Answer,
-		})
+	if err := w.gs.PubSub.Dispatch(c.Request().Context(), "lobby."+lobby.ID, events.EventUserAnswer, events.EventInfo{
+		Account:       account,
+		AccountID:     account.ID,
+		QuestionIndex: request.Index,
+		UserAnswer:    request.Answer,
+	}); err != nil {
+		return err
 	}
 
 	return c.JSON(200, ResponseOk(200, "با موفقیت درخواست ثبت شد"))
@@ -73,10 +76,8 @@ func (w *WebApp) lobbyEvents(c echo.Context) error {
 	lobby := getLobby(c)
 
 	// get current lobby hash
-	game := w.gs.MustGame(lobby.ID)
-
 	ch := make(chan EventResponseSerializer, 1)
-	cancel, _ := game.Events.Register("lobby."+lobby.ID, events.EventAny, func(info events.EventInfo) {
+	cancel, _ := w.gs.PubSub.Register("lobby."+lobby.ID, events.EventAny, func(info events.EventInfo) {
 		if !info.IsType(events.EventForceLobbyReload) {
 			return
 		}
