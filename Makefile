@@ -8,6 +8,9 @@ test:
 serve:
 	go run main.go serve
 
+scale:
+	bash test-scale.sh
+
 dev:generate
 	go run main.go serve
 

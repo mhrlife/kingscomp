@@ -10,7 +10,8 @@ import (
 type Config struct {
 	BotToken string
 
-	AppURL string
+	AppURL     string
+	ServerAddr string
 
 	LobbyMaxPlayer     int
 	LobbyQuestionCount int
@@ -27,6 +28,7 @@ func init() {
 
 		LobbyMaxPlayer:     getInt("LOBBY_MAX_PLAYER"),
 		LobbyQuestionCount: getInt("LOBBY_QUESTION_COUNT"),
+		ServerAddr:         getDefault("SERVER_ADDR", ":8080"),
 	}
 }
 
@@ -36,4 +38,11 @@ func getInt(key string) int {
 		logrus.WithError(err).WithField("key", key).Fatal("couldn't get env value")
 	}
 	return num
+}
+func getDefault(key, def string) string {
+	k := os.Getenv(key)
+	if k == "" {
+		return def
+	}
+	return k
 }

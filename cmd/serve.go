@@ -75,7 +75,7 @@ func serve(_ *cobra.Command, _ []string) {
 
 	go tg.Start()
 
-	wa := webapp.NewWebApp(app, gs, ":8080", tg.Bot)
+	wa := webapp.NewWebApp(app, gs, config.Default.ServerAddr, tg.Bot)
 
 	if os.Getenv("ENV") == "local" {
 		go func() {

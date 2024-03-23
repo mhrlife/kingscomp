@@ -2,6 +2,7 @@ package gameserver
 
 import (
 	"context"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/events"
@@ -334,6 +335,7 @@ func (g *Game) saveLobby() {
 func (g *Game) close() {
 	for userId, state := range g.lobby.UserState {
 		if !state.IsResigned {
+			fmt.Println("Dispatched!!!!!!!!!!", g.lobby.UserState, userId)
 			g.Events.Dispatch(
 				g.Ctx,
 				g.pubSubId(),
