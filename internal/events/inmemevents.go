@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"sync"
 )
 
@@ -29,9 +30,17 @@ func (e *InMemoryEvents) Dispatch(t EventType, info EventInfo) error {
 		add = append(add, e.listeners[EventAny]...)
 	}
 	listeners := append(e.listeners[t], add...)
+	logrus.WithFields(logrus.Fields{
+		"count": len(listeners),
+		"event": t.Type(),
+	}).Info("started dispatching event")
 	for _, listener := range listeners {
 		go listener.callback(info)
 	}
+	logrus.WithFields(logrus.Fields{
+		"count": len(listeners),
+		"event": t.Type(),
+	}).Info("dispatch done")
 	e.mu.RUnlock()
 	return nil
 }

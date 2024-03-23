@@ -88,8 +88,8 @@ func (g *Game) created() error {
 
 	defer cleanAny()
 
-	//defer g.Events.Clean(g.pubSubId(), events.EventJoinReminder)
-	//defer g.Events.Clean(g.pubSubId(), events.EventLateResign)
+	defer g.Events.Clean(g.pubSubId(), events.EventJoinReminder)
+	defer g.Events.Clean(g.pubSubId(), events.EventLateResign)
 	defer g.reloadClientLobbies()
 
 	noticeSent := false
@@ -161,6 +161,17 @@ func (g *Game) created() error {
 func (g *Game) getReady() error {
 	defer g.reloadClientLobbies()
 
+	logrus.WithFields(logrus.Fields{
+		"lobby": g.LobbyId,
+	}).Info("started get ready")
+	s := time.Now()
+	defer func() {
+		logrus.WithFields(logrus.Fields{
+			"lobby": g.LobbyId,
+			"took":  time.Since(s),
+		}).Info("get ready is done")
+	}()
+
 	<-time.After(g.GetReadyDuration)
 	g.lobby.State = "started"
 	g.lobby.GameInfo.CorrectAnswers = make(map[int64][]entity.Answer)
@@ -181,9 +192,20 @@ func (g *Game) started() error {
 				return
 			}
 			chUpdate <- info
+
+			logrus.WithFields(logrus.Fields{
+				"lobbyId":         g.LobbyId,
+				"currentQuestion": g.lobby.GameInfo.CurrentQuestion,
+				"type":            info.Type.Type(),
+			}).Info("got a new update")
 		},
 	)
 	defer eCancel()
+
+	logrus.WithFields(logrus.Fields{
+		"lobbyId":         g.LobbyId,
+		"currentQuestion": g.lobby.GameInfo.CurrentQuestion,
+	}).Info("starting the question state")
 
 	for {
 
@@ -268,6 +290,12 @@ func (g *Game) nextQuestion() {
 		return
 	}
 
+	logrus.WithFields(logrus.Fields{
+		"lobbyId": g.LobbyId,
+		"from":    g.lobby.GameInfo.CurrentQuestion,
+		"to":      g.lobby.GameInfo.CurrentQuestion + 1,
+	}).Info("dispatching next question")
+
 	g.lobby.GameInfo.CurrentQuestion += 1
 	g.lobby.GameInfo.CurrentQuestionStartedAt = time.Now()
 	g.lobby.GameInfo.CurrentQuestionEndsAt = time.Now().Add(g.Config.QuestionTimeout)
@@ -315,7 +343,6 @@ func (g *Game) close() {
 		}
 	}
 	<-time.After(10 * time.Second)
-	g.Events.Close()
 	g.CancelFunc()
 }
 

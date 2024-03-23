@@ -55,7 +55,6 @@ func (w *WebApp) Shutdown(ctx context.Context) error {
 }
 
 func (w *WebApp) StartDev() error {
-	w.e.Use(middleware.Logger())
 	w.e.Use(middleware.Recover())
 	return w.e.Start(w.addr)
 }
