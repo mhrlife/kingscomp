@@ -5,7 +5,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
-	"kingscomp/internal/gameserver/events"
+	"kingscomp/internal/events"
 	"sort"
 	"strconv"
 )

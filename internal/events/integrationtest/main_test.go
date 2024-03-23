@@ -3,13 +3,13 @@ package integrationtest
 import (
 	"fmt"
 	"github.com/ory/dockertest/v3"
-	"github.com/streadway/amqp"
+	"kingscomp/internal/repository/redis"
 	"kingscomp/pkg/testhelper"
 	"os"
 	"testing"
 )
 
-var rabbitPort string
+var redisPort string
 
 func TestMain(m *testing.M) {
 	if !testhelper.IsIntegration() {
@@ -19,21 +19,14 @@ func TestMain(m *testing.M) {
 	pool := testhelper.StartDockerPool()
 
 	// set up the redis container for tests
-	redisRes := testhelper.StartDockerInstance(pool, "rabbitmq", "3.13.0-alpine",
+	redisRes := testhelper.StartDockerInstance(pool, "redis/redis-stack-server", "latest",
 		func(res *dockertest.Resource) error {
-			port := res.GetPort("5672/tcp")
-			con, err := amqp.Dial(fmt.Sprintf(
-				"amqp://guest:guest@localhost:%s/",
-				port,
-			))
-			if err != nil {
-				return err
-			}
-			con.Close()
-			return nil
+			port := res.GetPort("6379/tcp")
+			_, err := redis.NewRedisClient(fmt.Sprintf("localhost:%s", port))
+			return err
 		})
 
-	rabbitPort = redisRes.GetPort("5672/tcp")
+	redisPort = redisRes.GetPort("6379/tcp")
 
 	// now run tests
 	exitCode := m.Run()

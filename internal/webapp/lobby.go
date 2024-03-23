@@ -3,7 +3,7 @@ package webapp
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"kingscomp/internal/gameserver/events"
+	"kingscomp/internal/events"
 	"kingscomp/internal/webapp/views/pages"
 	"time"
 )

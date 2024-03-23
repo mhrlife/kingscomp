@@ -47,14 +47,15 @@ func (e *InMemoryEvents) Clean(t EventType) error {
 }
 
 func (e *InMemoryEvents) Close() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	if e.mu.TryLock() {
+		defer e.mu.Unlock()
+	}
 
 	e.listeners = make(map[EventType][]Listener)
 	return nil
 }
 
-func (e *InMemoryEvents) Register(t EventType, callback Callback) (func(), error) {
+func (e *InMemoryEvents) Register(t EventType, callback Callback) (func() int, error) {
 	e.mu.Lock()
 
 	uid := uuid.New().String()
@@ -65,11 +66,18 @@ func (e *InMemoryEvents) Register(t EventType, callback Callback) (func(), error
 
 	e.mu.Unlock()
 
-	return func() {
+	return func() int {
 		e.mu.Lock()
+		defer e.mu.Unlock()
+
 		e.listeners[t] = lo.Filter(e.listeners[t], func(item Listener, index int) bool {
 			return uid != item.uuid
 		})
-		e.mu.Unlock()
+		l := len(e.listeners[t])
+		if l == 0 {
+			e.Close()
+		}
+		return l
+
 	}, nil
 }

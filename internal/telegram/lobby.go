@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"gopkg.in/telebot.v3"
 	"kingscomp/internal/entity"
-	"kingscomp/internal/gameserver/events"
+	"kingscomp/internal/events"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"
 	"strings"

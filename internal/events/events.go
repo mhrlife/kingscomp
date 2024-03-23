@@ -1,16 +1,22 @@
 package events
 
 import (
+	"context"
 	"kingscomp/internal/entity"
 	"slices"
 )
 
+type PubSub interface {
+	Dispatch(ctx context.Context, t EventType, info EventInfo) error
+	Register(t EventType, callback Callback) (func(), error)
+	Close() error
+}
+
 type Eventer interface {
 	Dispatch(t EventType, info EventInfo) error
-	listenerCount(t EventType) int
 	Clean(t EventType) error
 	Close() error
-	Register(t EventType, callback Callback) (func(), error)
+	Register(t EventType, callback Callback) (func() int, error)
 }
 
 type EventType int

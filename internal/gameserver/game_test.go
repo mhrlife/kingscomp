@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/exp/maps"
 	"kingscomp/internal/entity"
-	events2 "kingscomp/internal/gameserver/events"
+	events2 "kingscomp/internal/events"
 	"kingscomp/internal/repository"
 	"kingscomp/internal/service"
 	"sync"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
-	"kingscomp/internal/gameserver/events"
+	events2 "kingscomp/internal/events"
 	"kingscomp/internal/service"
 	"slices"
 	"time"
@@ -16,7 +16,7 @@ type Game struct {
 	app     *service.App
 	server  *GameServer
 	LobbyId entity.ID
-	Events  events.Eventer
+	Events  events2.Eventer
 
 	Ctx        context.Context
 	CancelFunc context.CancelFunc
@@ -30,7 +30,7 @@ func NewGame(lobbyId string, app *service.App, server *GameServer, config Config
 		LobbyId: entity.NewID("lobby", lobbyId),
 		app:     app,
 		server:  server,
-		Events:  events.NewInMemoryEvents(),
+		Events:  events2.NewInMemoryEvents(),
 	}
 }
 
@@ -79,8 +79,8 @@ func (g *Game) Start(ctx context.Context) {
 
 func (g *Game) created() error {
 	readyCh := make(chan int64)
-	cleanAny, _ := g.Events.Register(events.EventAny, func(info events.EventInfo) {
-		if !info.IsType(events.EventUserReady, events.EventUserResigned) {
+	cleanAny, _ := g.Events.Register(events2.EventAny, func(info events2.EventInfo) {
+		if !info.IsType(events2.EventUserReady, events2.EventUserResigned) {
 			return
 		}
 		readyCh <- info.AccountID
@@ -88,8 +88,8 @@ func (g *Game) created() error {
 
 	defer cleanAny()
 
-	defer g.Events.Clean(events.EventJoinReminder)
-	defer g.Events.Clean(events.EventLateResign)
+	defer g.Events.Clean(events2.EventJoinReminder)
+	defer g.Events.Clean(events2.EventLateResign)
 	defer g.reloadClientLobbies()
 
 	noticeSent := false
@@ -121,7 +121,7 @@ func (g *Game) created() error {
 					if state.IsResigned || state.IsReady {
 						continue
 					}
-					g.Events.Dispatch(events.EventJoinReminder, events.EventInfo{AccountID: accountId})
+					g.Events.Dispatch(events2.EventJoinReminder, events2.EventInfo{AccountID: accountId})
 				}
 			} else {
 				for accountId, state := range g.lobby.UserState {
@@ -136,7 +136,7 @@ func (g *Game) created() error {
 						logrus.WithError(err).Errorln("couldn't save resigned user after timeout")
 					}
 					logrus.WithField("userId", accountId).Info("user late resigned")
-					g.Events.Dispatch(events.EventLateResign, events.EventInfo{AccountID: accountId})
+					g.Events.Dispatch(events2.EventLateResign, events2.EventInfo{AccountID: accountId})
 				}
 
 				g.lobby.State = "get-ready"
@@ -162,9 +162,9 @@ func (g *Game) getReady() error {
 }
 
 func (g *Game) started() error {
-	chUpdate := make(chan events.EventInfo, 10)
-	eCancel, _ := g.Events.Register(events.EventAny, func(info events.EventInfo) {
-		if !info.IsType(events.EventUserAnswer, events.EventUserResigned) {
+	chUpdate := make(chan events2.EventInfo, 10)
+	eCancel, _ := g.Events.Register(events2.EventAny, func(info events2.EventInfo) {
+		if !info.IsType(events2.EventUserAnswer, events2.EventUserResigned) {
 			return
 		}
 		chUpdate <- info
@@ -188,7 +188,7 @@ func (g *Game) started() error {
 		case info := <-chUpdate: // one user has made their answer
 			g.loadLobby()
 			switch info.Type {
-			case events.EventUserResigned:
+			case events2.EventUserResigned:
 				//todo: check if all users have answered except the resigned user
 				accountId := info.AccountID
 				if !slices.Contains(g.lobby.Participants, accountId) {
@@ -203,7 +203,7 @@ func (g *Game) started() error {
 				g.lobby.UserState[accountId] = userState
 				g.saveLobby()
 				g.reloadClientLobbies()
-			case events.EventUserAnswer:
+			case events2.EventUserAnswer:
 				accountId := info.AccountID
 				answerIndex := info.UserAnswer
 				questionIndex := info.QuestionIndex
@@ -262,7 +262,7 @@ func (g *Game) nextQuestion() {
 }
 
 func (g *Game) reloadClientLobbies() {
-	g.Events.Dispatch(events.EventForceLobbyReload, events.EventInfo{})
+	g.Events.Dispatch(events2.EventForceLobbyReload, events2.EventInfo{})
 }
 
 func (g *Game) loadLobby() {
@@ -287,7 +287,7 @@ func (g *Game) saveLobby() {
 func (g *Game) close() {
 	for userId, state := range g.lobby.UserState {
 		if !state.IsResigned {
-			g.Events.Dispatch(events.EventGameClosed, events.EventInfo{AccountID: userId})
+			g.Events.Dispatch(events2.EventGameClosed, events2.EventInfo{AccountID: userId})
 		}
 	}
 	<-time.After(1 * time.Second)
