@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"sync"
@@ -23,7 +24,11 @@ func NewInMemoryEvents() *InMemoryEvents {
 func (e *InMemoryEvents) Dispatch(t EventType, info EventInfo) error {
 	info.Type = t
 	e.mu.RLock()
-	listeners := append(e.listeners[t], e.listeners[EventAny]...)
+	var add []Listener
+	if !info.IsType(EventAny) {
+		add = append(add, e.listeners[EventAny]...)
+	}
+	listeners := append(e.listeners[t], add...)
 	for _, listener := range listeners {
 		go listener.callback(info)
 	}
@@ -47,14 +52,15 @@ func (e *InMemoryEvents) Clean(t EventType) error {
 }
 
 func (e *InMemoryEvents) Close() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	if e.mu.TryLock() {
+		defer e.mu.Unlock()
+	}
 
 	e.listeners = make(map[EventType][]Listener)
 	return nil
 }
 
-func (e *InMemoryEvents) Register(t EventType, callback Callback) (func(), error) {
+func (e *InMemoryEvents) Register(t EventType, callback Callback) (func() int, error) {
 	e.mu.Lock()
 
 	uid := uuid.New().String()
@@ -65,11 +71,49 @@ func (e *InMemoryEvents) Register(t EventType, callback Callback) (func(), error
 
 	e.mu.Unlock()
 
-	return func() {
+	return func() int {
 		e.mu.Lock()
+		defer e.mu.Unlock()
+
 		e.listeners[t] = lo.Filter(e.listeners[t], func(item Listener, index int) bool {
 			return uid != item.uuid
 		})
-		e.mu.Unlock()
+		l := len(e.listeners[t])
+		return l
+
 	}, nil
+}
+
+var _ PubSub = &InMemPubSub{}
+
+type InMemPubSub struct {
+	keys sync.Map
+}
+
+func NewInMemPubSub() *InMemPubSub {
+	return &InMemPubSub{}
+}
+
+func (i *InMemPubSub) Dispatch(ctx context.Context, key string, t EventType, info EventInfo) error {
+	iInMem, _ := i.keys.LoadOrStore(key, NewInMemoryEvents())
+	return iInMem.(*InMemoryEvents).Dispatch(t, info)
+}
+
+func (i *InMemPubSub) Register(key string, t EventType, callback Callback) (func(), error) {
+	iInMem, _ := i.keys.LoadOrStore(key, NewInMemoryEvents())
+	cancel, _ := iInMem.(*InMemoryEvents).Register(t, callback)
+	return func() {
+		if cancel() == 0 {
+			i.keys.Delete(key)
+		}
+	}, nil
+}
+
+func (i *InMemPubSub) Clean(key string, t EventType) error {
+	iInMem, _ := i.keys.LoadOrStore(key, NewInMemoryEvents())
+	return iInMem.(*InMemoryEvents).Clean(t)
+}
+
+func (i *InMemPubSub) Close() error {
+	return nil
 }

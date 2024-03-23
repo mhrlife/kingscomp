@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
-	"kingscomp/internal/gameserver/events"
+	"kingscomp/internal/events"
 	"kingscomp/internal/service"
 	"slices"
 	"time"
@@ -16,7 +16,7 @@ type Game struct {
 	app     *service.App
 	server  *GameServer
 	LobbyId entity.ID
-	Events  events.Eventer
+	Events  events.PubSub
 
 	Ctx        context.Context
 	CancelFunc context.CancelFunc
@@ -30,7 +30,7 @@ func NewGame(lobbyId string, app *service.App, server *GameServer, config Config
 		LobbyId: entity.NewID("lobby", lobbyId),
 		app:     app,
 		server:  server,
-		Events:  events.NewInMemoryEvents(),
+		Events:  server.pubSub,
 	}
 }
 
@@ -79,7 +79,7 @@ func (g *Game) Start(ctx context.Context) {
 
 func (g *Game) created() error {
 	readyCh := make(chan int64)
-	cleanAny, _ := g.Events.Register(events.EventAny, func(info events.EventInfo) {
+	cleanAny, _ := g.Events.Register(g.pubSubId(), events.EventAny, func(info events.EventInfo) {
 		if !info.IsType(events.EventUserReady, events.EventUserResigned) {
 			return
 		}
@@ -88,8 +88,8 @@ func (g *Game) created() error {
 
 	defer cleanAny()
 
-	defer g.Events.Clean(events.EventJoinReminder)
-	defer g.Events.Clean(events.EventLateResign)
+	//defer g.Events.Clean(g.pubSubId(), events.EventJoinReminder)
+	//defer g.Events.Clean(g.pubSubId(), events.EventLateResign)
 	defer g.reloadClientLobbies()
 
 	noticeSent := false
@@ -121,7 +121,12 @@ func (g *Game) created() error {
 					if state.IsResigned || state.IsReady {
 						continue
 					}
-					g.Events.Dispatch(events.EventJoinReminder, events.EventInfo{AccountID: accountId})
+					g.Events.Dispatch(
+						g.Ctx,
+						g.pubSubId(),
+						events.EventJoinReminder,
+						events.EventInfo{AccountID: accountId},
+					)
 				}
 			} else {
 				for accountId, state := range g.lobby.UserState {
@@ -136,7 +141,12 @@ func (g *Game) created() error {
 						logrus.WithError(err).Errorln("couldn't save resigned user after timeout")
 					}
 					logrus.WithField("userId", accountId).Info("user late resigned")
-					g.Events.Dispatch(events.EventLateResign, events.EventInfo{AccountID: accountId})
+					g.Events.Dispatch(
+						g.Ctx,
+						g.pubSubId(),
+						events.EventLateResign,
+						events.EventInfo{AccountID: accountId},
+					)
 				}
 
 				g.lobby.State = "get-ready"
@@ -163,12 +173,16 @@ func (g *Game) getReady() error {
 
 func (g *Game) started() error {
 	chUpdate := make(chan events.EventInfo, 10)
-	eCancel, _ := g.Events.Register(events.EventAny, func(info events.EventInfo) {
-		if !info.IsType(events.EventUserAnswer, events.EventUserResigned) {
-			return
-		}
-		chUpdate <- info
-	})
+	eCancel, _ := g.Events.Register(
+		g.pubSubId(),
+		events.EventAny,
+		func(info events.EventInfo) {
+			if !info.IsType(events.EventUserAnswer, events.EventUserResigned) {
+				return
+			}
+			chUpdate <- info
+		},
+	)
 	defer eCancel()
 
 	for {
@@ -262,7 +276,12 @@ func (g *Game) nextQuestion() {
 }
 
 func (g *Game) reloadClientLobbies() {
-	g.Events.Dispatch(events.EventForceLobbyReload, events.EventInfo{})
+	g.Events.Dispatch(
+		g.Ctx,
+		g.pubSubId(),
+		events.EventForceLobbyReload,
+		events.EventInfo{},
+	)
 }
 
 func (g *Game) loadLobby() {
@@ -287,10 +306,19 @@ func (g *Game) saveLobby() {
 func (g *Game) close() {
 	for userId, state := range g.lobby.UserState {
 		if !state.IsResigned {
-			g.Events.Dispatch(events.EventGameClosed, events.EventInfo{AccountID: userId})
+			g.Events.Dispatch(
+				g.Ctx,
+				g.pubSubId(),
+				events.EventGameClosed,
+				events.EventInfo{AccountID: userId},
+			)
 		}
 	}
-	<-time.After(1 * time.Second)
+	<-time.After(10 * time.Second)
 	g.Events.Close()
 	g.CancelFunc()
+}
+
+func (g *Game) pubSubId() string {
+	return "lobby." + g.LobbyId.ID()
 }

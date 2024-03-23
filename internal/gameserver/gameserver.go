@@ -6,6 +6,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
+	"kingscomp/internal/events"
 	"kingscomp/internal/service"
 	"sync"
 	"time"
@@ -24,6 +25,8 @@ type GameServer struct {
 
 	ctx       context.Context
 	cancelCtx context.CancelFunc
+
+	pubSub events.PubSub
 }
 
 type Config struct {
@@ -44,9 +47,15 @@ func DefaultGameServerConfig() Config {
 	}
 }
 
-func NewGameServer(app *service.App, config Config) *GameServer {
+func NewGameServer(app *service.App, lobbyPubSub events.PubSub, config Config) *GameServer {
 	ctx, cancel := context.WithCancel(context.Background())
-	gs := &GameServer{app: app, Config: config, ctx: ctx, cancelCtx: cancel}
+	gs := &GameServer{
+		app:       app,
+		Config:    config,
+		ctx:       ctx,
+		cancelCtx: cancel,
+		pubSub:    lobbyPubSub,
+	}
 	if err := gs.StartupGameServers(context.Background()); err != nil {
 		logrus.WithError(err).Errorln("couldn't start up game servers")
 	}

@@ -3,33 +3,43 @@ package telegram
 import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/telebot.v3"
+	"kingscomp/internal/config"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/service"
 	"kingscomp/internal/telegram/teleprompt"
-	"time"
 )
 
 type Telegram struct {
 	App *service.App
-	bot *telebot.Bot
+	Bot *telebot.Bot
 
 	TelePrompt *teleprompt.TelePrompt
 	mm         matchmaking.Matchmaking
 	gs         *gameserver.GameServer
 }
 
-func NewTelegram(app *service.App, mm matchmaking.Matchmaking, gs *gameserver.GameServer, apiKey string) (*Telegram, error) {
+func NewTelegram(app *service.App,
+	mm matchmaking.Matchmaking,
+	gs *gameserver.GameServer,
+	tp *teleprompt.TelePrompt,
+	apiKey string,
+) (*Telegram, error) {
 
 	t := &Telegram{
 		App:        app,
-		TelePrompt: teleprompt.NewTelePrompt(),
+		TelePrompt: tp,
 		mm:         mm,
 		gs:         gs,
 	}
 	pref := telebot.Settings{
-		Token:   apiKey,
-		Poller:  &telebot.LongPoller{Timeout: 60 * time.Second},
+		Token: apiKey,
+		Poller: &telebot.Webhook{
+			MaxConnections: 100,
+			Endpoint: &telebot.WebhookEndpoint{
+				PublicURL: config.Default.AppURL + "/webhook/" + config.Default.BotToken,
+			},
+		},
 		OnError: t.onError,
 	}
 
@@ -39,16 +49,16 @@ func NewTelegram(app *service.App, mm matchmaking.Matchmaking, gs *gameserver.Ga
 		return nil, err
 	}
 
-	t.bot = bot
+	t.Bot = bot
 
 	t.setupHandlers()
 	return t, nil
 }
 
 func (t *Telegram) Start() {
-	t.bot.Start()
+	t.Bot.Start()
 }
 
 func (t *Telegram) Shutdown() {
-	t.bot.Stop()
+	t.Bot.Stop()
 }

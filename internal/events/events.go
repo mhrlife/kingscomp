@@ -1,16 +1,24 @@
 package events
 
 import (
+	"context"
+	"gopkg.in/telebot.v3"
 	"kingscomp/internal/entity"
 	"slices"
 )
 
+type PubSub interface {
+	Dispatch(ctx context.Context, key string, t EventType, info EventInfo) error
+	Register(key string, t EventType, callback Callback) (func(), error)
+	Clean(key string, t EventType) error
+	Close() error
+}
+
 type Eventer interface {
 	Dispatch(t EventType, info EventInfo) error
-	listenerCount(t EventType) int
 	Clean(t EventType) error
 	Close() error
-	Register(t EventType, callback Callback) (func(), error)
+	Register(t EventType, callback Callback) (func() int, error)
 }
 
 type EventType int
@@ -39,6 +47,9 @@ var eventTypes = map[EventType]string{
 	EventJoinReminder:     "join-reminder",
 	EventLateResign:       "late-resign",
 	EventForceLobbyReload: "lobby-reload",
+	EventUserAnswer:       "user-answer",
+	EventGameClosed:       "event-game-closed",
+	EventAny:              "any",
 }
 
 func (e EventType) Type() string {
@@ -57,6 +68,9 @@ type EventInfo struct {
 
 	QuestionIndex int `json:"questionIndex"`
 	UserAnswer    int `json:"userAnswer"`
+
+	UUID    string           `json:"uuid"`
+	Message *telebot.Message `json:"message"`
 }
 
 func (e EventInfo) IsType(acceptable ...EventType) bool {

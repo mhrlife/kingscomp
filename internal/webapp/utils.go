@@ -8,8 +8,8 @@ import (
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
+	"kingscomp/internal/config"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 )
@@ -41,7 +41,7 @@ func ValidateWebAppInputData(inputData string) (bool, error) {
 	sort.Strings(dataCheckString)
 
 	secret := hmac.New(sha256.New, []byte("WebAppData"))
-	secret.Write([]byte(os.Getenv("BOT_API")))
+	secret.Write([]byte(config.Default.BotToken))
 
 	hHash := hmac.New(sha256.New, secret.Sum(nil))
 	hHash.Write([]byte(strings.Join(dataCheckString, "\n")))

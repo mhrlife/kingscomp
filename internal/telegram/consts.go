@@ -32,6 +32,6 @@ var (
 
 func NewStartWebAppGame(lobbyId string) telebot.Btn {
 	return selector.WebApp("🎮 باز کردن بازی", &telebot.WebApp{
-		URL: config.Default.WebAppAddr + "/lobby/" + lobbyId,
+		URL: config.Default.AppURL + "/lobby/" + lobbyId,
 	})
 }

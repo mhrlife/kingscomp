@@ -9,6 +9,7 @@ import (
 	"github.com/redis/rueidis"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"kingscomp/internal/config"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/repository"
 	"kingscomp/pkg/jsonhelper"
@@ -70,7 +71,7 @@ func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.D
 
 	resp, err := r.matchMakingScript.Exec(ctx, r.client,
 		[]string{"matchmaking", "matchmaking"},
-		[]string{fmt.Sprint(MaxLobbyMembers - 1),
+		[]string{fmt.Sprint(config.Default.LobbyMaxPlayer - 1),
 			strconv.FormatInt(time.Now().Add(-time.Minute*2).Unix(), 10),
 			uuid.New().String(), strconv.FormatInt(userId, 10),
 			strconv.FormatInt(time.Now().Unix(), 10),
@@ -137,7 +138,7 @@ func (r RedisMatchmaking) createNewLobby(ctx context.Context, lobbyId string, us
 		return entity.Lobby{}, err
 	}
 
-	questionIndexes := randhelper.GenerateDistinctRandomNumbers(LobbyQuestionCount, 0, activeQuestionsCount-1)
+	questionIndexes := randhelper.GenerateDistinctRandomNumbers(config.Default.LobbyQuestionCount, 0, activeQuestionsCount-1)
 	questions, err := r.question.GetActiveQuestions(ctx, questionIndexes...)
 	if err != nil {
 		return entity.Lobby{}, err

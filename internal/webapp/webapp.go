@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/telebot.v3"
 	"io/fs"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/service"
@@ -22,15 +23,22 @@ type WebApp struct {
 	e    *echo.Echo
 	addr string
 	gs   *gameserver.GameServer
+	bot  *telebot.Bot
 }
 
-func NewWebApp(app *service.App, gs *gameserver.GameServer, addr string) *WebApp {
+func NewWebApp(
+	app *service.App,
+	gs *gameserver.GameServer,
+	addr string,
+	bot *telebot.Bot,
+) *WebApp {
 	e := echo.New()
 	wa := &WebApp{
 		App:  app,
 		e:    e,
 		addr: addr,
 		gs:   gs,
+		bot:  bot,
 	}
 	wa.urls()
 	wa.static()
