@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+const maxLobbySize = 5
+
 func TestMatchmaking(t *testing.T) {
 	suite.Run(t, new(MatchmakingTestSuite))
 }
@@ -83,13 +85,13 @@ func (s *MatchmakingTestSuite) TestMatchmaking_Join() {
 		}()
 	}
 
-	for i := 0; i < matchmaking.MaxLobbyMembers-1; i++ {
+	for i := 0; i < maxLobbySize-1; i++ {
 		testJoin(int64(3 + i))
 	}
 
 	<-time.After(time.Millisecond * 500)
 
-	assert.Equal(s.T(), int64(matchmaking.MaxLobbyMembers-1), zCount(s.T(), s.redisClient, "matchmaking"))
+	assert.Equal(s.T(), int64(maxLobbySize-1), zCount(s.T(), s.redisClient, "matchmaking"))
 
 	lobby, _, err := s.mm.Join(s.ctx, 14, s.timeout)
 	assert.NoError(s.T(), err)
@@ -150,7 +152,7 @@ func (s *MatchmakingTestSuite) TestMatchmaking_JoinWithManyLobbies() {
 	}
 
 	st := time.Now()
-	for i := 0; i < matchmaking.MaxLobbyMembers*1000; i++ {
+	for i := 0; i < maxLobbySize*1000; i++ {
 		testJoin(int64(i) + 1)
 	}
 
@@ -163,8 +165,8 @@ func (s *MatchmakingTestSuite) TestMatchmaking_JoinWithManyLobbies() {
 	for lobbyId, count := range counter.counter {
 		lobby, err := s.lobby.Get(context.Background(), entity.NewID("lobby", lobbyId))
 		assert.NoError(s.T(), err)
-		assert.Len(s.T(), lobby.Participants, matchmaking.MaxLobbyMembers)
-		assert.Equal(s.T(), count, matchmaking.MaxLobbyMembers)
+		assert.Len(s.T(), lobby.Participants, maxLobbySize)
+		assert.Equal(s.T(), count, maxLobbySize)
 		for _, participant := range lobby.Participants {
 			uCounter.Incr(participant)
 		}

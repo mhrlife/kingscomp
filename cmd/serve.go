@@ -12,6 +12,7 @@ import (
 	"kingscomp/internal/matchmaking"
 	"kingscomp/internal/repository"
 	"kingscomp/internal/repository/redis"
+	"kingscomp/internal/scoreboard"
 	"kingscomp/internal/service"
 	"kingscomp/internal/telegram"
 	"kingscomp/internal/telegram/teleprompt"
@@ -44,6 +45,8 @@ func serve(_ *cobra.Command, _ []string) {
 	accountRepository := repository.NewAccountRedisRepository(redisClient)
 	lobbyRepository := repository.NewLobbyRedisRepository(redisClient)
 	questionRepository := repository.NewQuestionRedisRepository(redisClient)
+
+	eventsQueue := events.NewRedisQueue(ctx, "events", redisClient)
 	// set up app
 	app := service.NewApp(
 		service.NewAccountService(accountRepository),
@@ -59,14 +62,17 @@ func serve(_ *cobra.Command, _ []string) {
 	gs := gameserver.NewGameServer(
 		app,
 		events.NewRedisPubSub(ctx, redisClient, "lobby.*"),
+		eventsQueue,
 		gameserver.DefaultGameServerConfig(),
 	)
 
 	tg, err := telegram.NewTelegram(
+		ctx,
 		app,
 		mm,
 		gs,
 		teleprompt.NewTelePrompt(ctx, redisClient),
+		scoreboard.NewScoreboard(redisClient),
 		config.Default.BotToken,
 	)
 	if err != nil {

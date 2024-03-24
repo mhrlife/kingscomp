@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/events"
-	"sort"
 	"strconv"
 )
 
@@ -85,46 +84,26 @@ func NewGameInfoSerializer(lobby entity.Lobby) GameInfoSerializer {
 
 type LeaderboardItem struct {
 	DisplayName string `json:"displayName"`
-	Score       int    `json:"score"`
+	Score       int64  `json:"score"`
 }
 type ResultSerializer struct {
 	Winner      string            `json:"winner"`
-	WinnerScore int               `json:"winnerScore"`
+	WinnerScore int64             `json:"winnerScore"`
 	Leaderboard []LeaderboardItem `json:"leaderboard"`
 }
 
-// NewResultSerializer todo: fix winning condition
 func NewResultSerializer(lobby entity.Lobby) ResultSerializer {
-	winnerName := ""
-	winnerScore := 0
-	var leaderboard []LeaderboardItem
-	for _, accountId := range lobby.Participants {
-		score := lo.Reduce(lobby.GameInfo.CorrectAnswers[accountId], func(agg int, item entity.Answer, i int) int {
-			if !item.Correct {
-				return agg
+	scores := lobby.Scores()
+	return ResultSerializer{
+		Winner:      scores[0].DisplayName,
+		WinnerScore: scores[0].Score,
+		Leaderboard: lo.Map(scores, func(item entity.Score, _ int) LeaderboardItem {
+			return LeaderboardItem{
+				DisplayName: item.DisplayName,
+				Score:       item.Score,
 			}
-			agg += 100 // for correct answer
-			questionDuration := lobby.GameInfo.CurrentQuestionEndsAt.Sub(lobby.GameInfo.CurrentQuestionStartedAt).Seconds()
-
-			agg += 50 - int(item.Duration.Seconds()/questionDuration*50) // for sooner answers
-			return agg
-		}, 0)
-		if score >= winnerScore {
-			winnerName = lobby.UserState[accountId].DisplayName
-			winnerScore = score
-		}
-
-		leaderboard = append(leaderboard, LeaderboardItem{
-			DisplayName: lobby.UserState[accountId].DisplayName,
-			Score:       score,
-		})
-
+		}),
 	}
-
-	sort.Slice(leaderboard, func(i, j int) bool {
-		return leaderboard[i].Score > leaderboard[j].Score
-	})
-	return ResultSerializer{Winner: winnerName, WinnerScore: winnerScore, Leaderboard: leaderboard}
 }
 
 type LobbySerializer struct {

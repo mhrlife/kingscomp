@@ -27,6 +27,7 @@ type GameServer struct {
 	cancelCtx context.CancelFunc
 
 	PubSub events.PubSub
+	Queue  events.Queue
 }
 
 type Config struct {
@@ -47,7 +48,7 @@ func DefaultGameServerConfig() Config {
 	}
 }
 
-func NewGameServer(app *service.App, lobbyPubSub events.PubSub, config Config) *GameServer {
+func NewGameServer(app *service.App, lobbyPubSub events.PubSub, queue events.Queue, config Config) *GameServer {
 	ctx, cancel := context.WithCancel(context.Background())
 	gs := &GameServer{
 		app:       app,
@@ -55,6 +56,7 @@ func NewGameServer(app *service.App, lobbyPubSub events.PubSub, config Config) *
 		ctx:       ctx,
 		cancelCtx: cancel,
 		PubSub:    lobbyPubSub,
+		Queue:     queue,
 	}
 	if err := gs.StartupGameServers(context.Background()); err != nil {
 		logrus.WithError(err).Errorln("couldn't start up game servers")

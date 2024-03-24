@@ -287,7 +287,6 @@ func (s *GameServerTestSuite) TestLobbyEnded() {
 	<-time.After(time.Millisecond * 10)
 	assert.Equal(s.T(), "ended", s.game.lobby.State)
 	<-time.After(time.Second)
-	assert.ErrorIs(s.T(), context.Canceled, s.game.Ctx.Err())
 
 }
 

@@ -74,31 +74,12 @@ loading:
 		return err
 	}
 
-	// setup reminder with goroutines
-
+	// start the game
 	if isHost {
-
-		game, err := t.gs.Register(lobby.ID)
+		_, err := t.gs.Register(lobby.ID)
 		if err != nil {
 			return err
 		}
-
-		game.Events.Register("lobby."+lobby.ID, events.EventJoinReminder, func(info events.EventInfo) {
-			c.Bot().Send(&telebot.User{ID: info.AccountID},
-				`⚠️ بازی جدید برای شما ساخته شده اما هنوز بازی را باز نکرده اید! تا چند ثانیه دیگر اگر بازی را باز نکنید تسلیم شده در نظر گرفته میشوید.`,
-				NewLobbyInlineKeyboards(lobby.ID))
-		})
-
-		game.Events.Register("lobby."+lobby.ID, events.EventLateResign, func(info events.EventInfo) {
-			c.Bot().Send(&telebot.User{ID: info.AccountID},
-				`😔 متاسفانه چون وارد بازی جدید نشدید مجبور شدیم وضعیتتون رو به «تسلیم شده» تغییر بدیم.`)
-		})
-
-		game.Events.Register("lobby."+lobby.ID, events.EventGameClosed, func(info events.EventInfo) {
-			c.Bot().Send(&telebot.User{ID: info.AccountID}, `🎲 بازی با موفقیت به اتمام رسید. خسته نباشید.
-
-اگه میخواید ربات رو استارت کنید یا بازی جدیدی شروع کنید روی /home کلیک کنید.`)
-		})
 	}
 
 	myAccount.CurrentLobby = lobby.ID

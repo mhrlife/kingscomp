@@ -2,7 +2,7 @@ package gameserver
 
 import (
 	"context"
-	"fmt"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/events"
@@ -88,9 +88,6 @@ func (g *Game) created() error {
 	})
 
 	defer cleanAny()
-
-	defer g.Events.Clean(g.pubSubId(), events.EventJoinReminder)
-	defer g.Events.Clean(g.pubSubId(), events.EventLateResign)
 	defer g.reloadClientLobbies()
 
 	noticeSent := false
@@ -122,11 +119,10 @@ func (g *Game) created() error {
 					if state.IsResigned || state.IsReady {
 						continue
 					}
-					g.Events.Dispatch(
+					g.server.Queue.Dispatch(
 						g.Ctx,
-						g.pubSubId(),
 						events.EventJoinReminder,
-						events.EventInfo{AccountID: accountId},
+						events.EventInfo{AccountID: accountId, LobbyID: g.LobbyId.ID()},
 					)
 				}
 			} else {
@@ -142,11 +138,10 @@ func (g *Game) created() error {
 						logrus.WithError(err).Errorln("couldn't save resigned user after timeout")
 					}
 					logrus.WithField("userId", accountId).Info("user late resigned")
-					g.Events.Dispatch(
+					g.server.Queue.Dispatch(
 						g.Ctx,
-						g.pubSubId(),
 						events.EventLateResign,
-						events.EventInfo{AccountID: accountId},
+						events.EventInfo{AccountID: accountId, LobbyID: g.LobbyId.ID()},
 					)
 				}
 
@@ -246,10 +241,12 @@ func (g *Game) started() error {
 				questionIndex := info.QuestionIndex
 
 				if questionIndex != g.lobby.GameInfo.CurrentQuestion {
+					logrus.WithField("accountId", accountId).Errorln("you have already answered this question")
 					continue
 				}
 				// check has answered questionIndex of questionIndex+1 questions
 				if len(g.lobby.GameInfo.CorrectAnswers[accountId]) != questionIndex {
+					logrus.WithField("accountId", accountId).Errorln("you have already answered this question 2")
 					continue
 				}
 
@@ -333,14 +330,21 @@ func (g *Game) saveLobby() {
 }
 
 func (g *Game) close() {
+	scores := g.lobby.Scores()
 	for userId, state := range g.lobby.UserState {
 		if !state.IsResigned {
-			fmt.Println("Dispatched!!!!!!!!!!", g.lobby.UserState, userId)
-			g.Events.Dispatch(
+			g.server.Queue.Dispatch(
 				g.Ctx,
-				g.pubSubId(),
 				events.EventGameClosed,
 				events.EventInfo{AccountID: userId},
+			)
+			score, _ := lo.Find(scores, func(item entity.Score) bool {
+				return item.AccountID == userId
+			})
+			g.server.Queue.Dispatch(
+				g.Ctx,
+				events.EventNewScore,
+				events.EventInfo{AccountID: userId, Score: score.Score},
 			)
 		}
 	}

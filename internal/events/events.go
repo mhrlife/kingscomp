@@ -14,11 +14,9 @@ type PubSub interface {
 	Close() error
 }
 
-type Eventer interface {
-	Dispatch(t EventType, info EventInfo) error
-	Clean(t EventType) error
-	Close() error
-	Register(t EventType, callback Callback) (func() int, error)
+type Queue interface {
+	Dispatch(ctx context.Context, t EventType, info EventInfo) error
+	Register(t EventType, callback Callback) (func(), error)
 }
 
 type EventType int
@@ -39,6 +37,7 @@ const (
 	EventForceLobbyReload
 	EventUserAnswer
 	EventGameClosed
+	EventNewScore
 )
 
 var eventTypes = map[EventType]string{
@@ -50,6 +49,7 @@ var eventTypes = map[EventType]string{
 	EventUserAnswer:       "user-answer",
 	EventGameClosed:       "event-game-closed",
 	EventAny:              "any",
+	EventNewScore:         "new-score",
 }
 
 func (e EventType) Type() string {
@@ -61,16 +61,25 @@ func (e EventType) Type() string {
 }
 
 type EventInfo struct {
-	Type EventType `json:"type"`
+	UUID string    `json:"uuid,omitempty"`
+	Type EventType `json:"type,omitempty"`
 
-	AccountID int64          `json:"accountID"`
-	Account   entity.Account `json:"account"`
+	// user information
+	AccountID int64          `json:"account_id,omitempty"`
+	Account   entity.Account `json:"account,omitempty"`
 
-	QuestionIndex int `json:"questionIndex"`
-	UserAnswer    int `json:"userAnswer"`
+	// lobby information
+	LobbyID string `json:"lobby_id"`
 
-	UUID    string           `json:"uuid"`
-	Message *telebot.Message `json:"message"`
+	// answer information
+	QuestionIndex int `json:"question_index,omitempty"`
+	UserAnswer    int `json:"user_answer,omitempty"`
+
+	// telegram information
+	Message *telebot.Message `json:"message,omitempty"`
+
+	// leaderboard information
+	Score int64 `json:"score,omitempty"`
 }
 
 func (e EventInfo) IsType(acceptable ...EventType) bool {

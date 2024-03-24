@@ -4,7 +4,7 @@
 start_servers() {
     for ((i = 1; i <= 3; i++)); do
         SERVER_ADDR=":808$i" go run main.go serve &
-        sleep 2
+        sleep 3
     done
 }
 

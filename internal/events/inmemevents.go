@@ -8,8 +8,6 @@ import (
 	"sync"
 )
 
-var _ Eventer = &InMemoryEvents{}
-
 // InMemoryEvents todo: needs to be scalable, use redis instead
 type InMemoryEvents struct {
 	mu        sync.RWMutex

@@ -1,11 +1,13 @@
 package telegram
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/telebot.v3"
 	"kingscomp/internal/config"
 	"kingscomp/internal/gameserver"
 	"kingscomp/internal/matchmaking"
+	"kingscomp/internal/scoreboard"
 	"kingscomp/internal/service"
 	"kingscomp/internal/telegram/teleprompt"
 )
@@ -17,20 +19,30 @@ type Telegram struct {
 	TelePrompt *teleprompt.TelePrompt
 	mm         matchmaking.Matchmaking
 	gs         *gameserver.GameServer
+	sb         *scoreboard.Scoreboard
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewTelegram(app *service.App,
+func NewTelegram(
+	ctx context.Context,
+	app *service.App,
 	mm matchmaking.Matchmaking,
 	gs *gameserver.GameServer,
 	tp *teleprompt.TelePrompt,
+	sb *scoreboard.Scoreboard,
 	apiKey string,
 ) (*Telegram, error) {
-
+	ctx, cancel := context.WithCancel(ctx)
 	t := &Telegram{
 		App:        app,
 		TelePrompt: tp,
 		mm:         mm,
 		gs:         gs,
+		sb:         sb,
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 	pref := telebot.Settings{
 		Token: apiKey,
@@ -52,6 +64,7 @@ func NewTelegram(app *service.App,
 	t.Bot = bot
 
 	t.setupHandlers()
+	t.queue()
 	return t, nil
 }
 
@@ -60,5 +73,6 @@ func (t *Telegram) Start() {
 }
 
 func (t *Telegram) Shutdown() {
+	t.cancel()
 	t.Bot.Stop()
 }
