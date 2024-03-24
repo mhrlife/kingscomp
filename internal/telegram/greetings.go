@@ -40,9 +40,13 @@ func (t *Telegram) myInfo(c telebot.Context) error {
 	} else {
 		rows = append(rows, selector.Row(btnJoinMatchmaking))
 	}
+	rows = append(rows, selector.Row(btnLeaderboard))
 	selector.Inline(rows...)
-	return c.Send(fmt.Sprintf(`🏰 پادشاه «%s»
+	return c.Send(
+		fmt.Sprintf(`🏰 پادشاه «%s»
 به بازی نبرد پادشاهان خوش آمدی.
 
-چه کاری میتونم برات انجام بدم؟`, account.DisplayName), selector)
+چه کاری میتونم برات انجام بدم؟`, account.DisplayName),
+		selector,
+	)
 }

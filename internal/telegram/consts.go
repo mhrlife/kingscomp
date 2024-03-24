@@ -27,7 +27,7 @@ var (
 	btnJoinMatchmaking = selector.Data("🎮 شروع بازی جدید", "btnJoinMatchmaking")
 	btnCurrentMatch    = selector.Data("🎲 بازی در حال اجرای من", "btnCurrentMatch")
 	btnResignLobby     = selector.Data("🏳 تسلیم شدن", "btnResignLobby")
-	btnStartGameWebApp = selector.Data("🎮 باز کردن بازی", "btnStartGameWebApp")
+	btnLeaderboard     = selector.Data("🏆 برترین‌های امروز", "btnTodayLeaderboard")
 )
 
 func NewStartWebAppGame(lobbyId string) telebot.Btn {

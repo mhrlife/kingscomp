@@ -15,6 +15,7 @@ import (
 )
 
 func (t *Telegram) joinMatchmaking(c telebot.Context) error {
+	c.Delete()
 	c.Respond()
 	myAccount := GetAccount(c)
 
