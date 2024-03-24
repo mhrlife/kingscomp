@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/samber/lo"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/telebot.v3"
 	"kingscomp/internal/entity"
 	"kingscomp/internal/events"
@@ -15,12 +16,12 @@ import (
 )
 
 func (t *Telegram) joinMatchmaking(c telebot.Context) error {
-	c.Delete()
 	c.Respond()
+	c.Delete()
 	myAccount := GetAccount(c)
 
 	if myAccount.CurrentLobby != "" { //todo: show the current game's status
-		return c.Reply("در حال حاضر در حال انجام یک بازی هستید")
+		return c.Send("در حال حاضر در حال انجام یک بازی هستید", &telebot.ReplyMarkup{RemoveKeyboard: true})
 	}
 
 	msg, err := t.Input(c, InputConfig{
@@ -45,11 +46,18 @@ func (t *Telegram) joinMatchmaking(c telebot.Context) error {
 	}()
 
 	ticker := time.NewTicker(DefaultMatchmakingLoadingInterval)
-	loadingMessage, err := c.Bot().Send(c.Sender(), `🎮 درحال پیدا کردن حریف ... منتظر بمانید`)
+	loadingMessage, err := c.Bot().Send(
+		c.Sender(),
+		`🎮 درحال پیدا کردن حریف ... منتظر بمانید`,
+		generateInlineButtons([]telebot.Btn{btnLeaveMatchmaking}),
+	)
 	if err != nil {
 		return err
 	}
+
+	t.App.Account.SetField(t.ctx, entity.NewID("account", c.Sender().ID), "in_queue", true)
 	defer func() {
+		t.leaveMatchmaking(c.Sender().ID)
 		c.Bot().Delete(loadingMessage)
 	}()
 	s := time.Now()
@@ -90,6 +98,8 @@ loading:
 }
 
 func (t *Telegram) currentLobby(c telebot.Context) error {
+	c.Respond()
+	c.Delete()
 	myAccount := GetAccount(c)
 
 	lobby, accounts, err := t.App.LobbyParticipants(context.Background(), myAccount.CurrentLobby)
@@ -162,4 +172,22 @@ func (t *Telegram) resignLobby(c telebot.Context) error {
 
 	c.Set("account", myAccount)
 	return t.myInfo(c)
+}
+
+func (t *Telegram) handleLeaveMatchmaking(c telebot.Context) error {
+	c.Respond(&telebot.CallbackResponse{Text: "انجام شد"})
+	defer c.Delete()
+	if err := t.leaveMatchmaking(c.Sender().ID); err != nil {
+		logrus.WithError(err).Errorln("couldn't leave the match making")
+		return err
+	}
+	account := GetAccount(c)
+	account.CurrentLobby = ""
+	account.InQueue = false
+	c.Set("account", account)
+	return t.myInfo(c)
+}
+func (t *Telegram) leaveMatchmaking(userId int64) error {
+	t.App.Account.SetField(t.ctx, entity.NewID("account", userId), "in_queue", false)
+	return t.mm.Leave(t.ctx, userId)
 }

@@ -12,6 +12,7 @@ type Account struct {
 	State       string `json:"state"`
 
 	CurrentLobby string `json:"current_lobby"`
+	InQueue      bool   `json:"in_queue"`
 }
 
 func (a Account) EntityID() ID {

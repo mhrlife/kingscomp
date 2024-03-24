@@ -42,6 +42,7 @@ func (t *Telegram) myInfo(c telebot.Context) error {
 	}
 	rows = append(rows, selector.Row(btnLeaderboard))
 	selector.Inline(rows...)
+	selector.RemoveKeyboard = true
 	return c.Send(
 		fmt.Sprintf(`🏰 پادشاه «%s»
 به بازی نبرد پادشاهان خوش آمدی.

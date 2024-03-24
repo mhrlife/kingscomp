@@ -22,12 +22,13 @@ func GetAccount(c telebot.Context) entity.Account {
 }
 
 var (
-	selector           = &telebot.ReplyMarkup{}
-	btnEditDisplayName = selector.Data("📝 ویرایش نام‌نمایشی", "btnEditDisplayName")
-	btnJoinMatchmaking = selector.Data("🎮 شروع بازی جدید", "btnJoinMatchmaking")
-	btnCurrentMatch    = selector.Data("🎲 بازی در حال اجرای من", "btnCurrentMatch")
-	btnResignLobby     = selector.Data("🏳 تسلیم شدن", "btnResignLobby")
-	btnLeaderboard     = selector.Data("🏆 برترین‌های امروز", "btnTodayLeaderboard")
+	selector            = &telebot.ReplyMarkup{}
+	btnEditDisplayName  = selector.Data("📝 ویرایش نام‌نمایشی", "btnEditDisplayName")
+	btnJoinMatchmaking  = selector.Data("🎮 شروع بازی جدید", "btnJoinMatchmaking")
+	btnCurrentMatch     = selector.Data("🎲 بازی در حال اجرای من", "btnCurrentMatch")
+	btnResignLobby      = selector.Data("🏳 تسلیم شدن", "btnResignLobby")
+	btnLeaderboard      = selector.Data("🏆 برترین‌های امروز", "btnTodayLeaderboard")
+	btnLeaveMatchmaking = selector.Data("❌ انصراف", "btnLeaveMatchmaking")
 )
 
 func NewStartWebAppGame(lobbyId string) telebot.Btn {

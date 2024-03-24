@@ -58,16 +58,7 @@ func NewRedisMatchmaking(client rueidis.Client,
 
 func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.Duration) (entity.Lobby, bool, error) {
 
-	defer func() {
-		cmds := make([]rueidis.Completed, 0)
-		cmds = append(cmds,
-			r.client.B().Zrem().Key("matchmaking").Member(strconv.FormatInt(userId, 10)).Build(),
-			r.client.B().Del().Key(fmt.Sprintf("matchmaking:%d", userId)).Build(),
-		)
-		if err := repository.ReduceRedisResponseError(r.client.DoMulti(ctx, cmds...)); err != nil {
-			logrus.WithError(err).Errorln("couldn't successfully leave the match making")
-		}
-	}()
+	defer r.Leave(context.Background(), userId)
 
 	resp, err := r.matchMakingScript.Exec(ctx, r.client,
 		[]string{"matchmaking", "matchmaking"},
@@ -125,8 +116,16 @@ func (r RedisMatchmaking) Join(ctx context.Context, userId int64, timeout time.D
 }
 
 func (r RedisMatchmaking) Leave(ctx context.Context, userId int64) error {
-	//TODO implement me
-	panic("implement me")
+	cmds := make([]rueidis.Completed, 0)
+	cmds = append(cmds,
+		r.client.B().Zrem().Key("matchmaking").Member(strconv.FormatInt(userId, 10)).Build(),
+		r.client.B().Del().Key(fmt.Sprintf("matchmaking:%d", userId)).Build(),
+	)
+	if err := repository.ReduceRedisResponseError(r.client.DoMulti(ctx, cmds...)); err != nil {
+		logrus.WithError(err).Errorln("couldn't successfully leave the match making")
+		return err
+	}
+	return nil
 }
 
 func (r RedisMatchmaking) createNewLobby(ctx context.Context, lobbyId string, users []int64) (entity.Lobby, error) {

@@ -35,7 +35,7 @@ getInput:
 		if config.PromptKeyboard != nil {
 			c.Send(config.Prompt, generateKeyboard(config.PromptKeyboard))
 		} else {
-			c.Send(config.Prompt)
+			c.Send(config.Prompt, &telebot.ReplyMarkup{RemoveKeyboard: true})
 		}
 	}
 	// waits for the client until the response is fetched
@@ -78,11 +78,20 @@ getInput:
 }
 
 func generateKeyboard(rows [][]string) *telebot.ReplyMarkup {
-	mu := &telebot.ReplyMarkup{ResizeKeyboard: true, OneTimeKeyboard: true, ForceReply: true, RemoveKeyboard: true}
+	mu := &telebot.ReplyMarkup{ResizeKeyboard: true, RemoveKeyboard: true, ForceReply: true, OneTimeKeyboard: true}
 	mu.Reply(lo.Map(rows, func(row []string, _ int) telebot.Row {
 		return mu.Row(lo.Map(row, func(btn string, _ int) telebot.Btn {
 			return mu.Text(btn)
 		})...)
 	})...)
 	return mu
+}
+
+func generateInlineButtons(rr ...[]telebot.Btn) *telebot.ReplyMarkup {
+	selector := &telebot.ReplyMarkup{}
+	rows := lo.Map(rr, func(item []telebot.Btn, _ int) telebot.Row {
+		return selector.Row(item...)
+	})
+	selector.Inline(rows...)
+	return selector
 }

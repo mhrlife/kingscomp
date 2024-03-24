@@ -55,8 +55,9 @@ templ LobbyPage(lobbyId string){
                         x-text="$store.lobby.currentLobby.gameInfo.currentQuestion.question"></h2>
                     <div style="padding-top:30px; width: 100%;display: flex;flex-wrap: wrap;justify-content: space-between">
                         <template x-for="(value,index) in $store.lobby.currentLobby.gameInfo.currentQuestion.choices">
-                            <button class="tg-button" style="width: 45%;margin-bottom: 10px"
-                                    @click.prevent="$store.lobby.answered(index)">
+                            <button :class="'tg-button '+($store.lobby.currentLobby.gameInfo.currentQuestion.index <= $store.lobby.lastQuestionAnswered ? 'answered':'')" style="width: 45%;margin-bottom: 10px"
+                                    @click.prevent="$store.lobby.answered(index)"
+                            >
                                 <span x-text="value"></span>
                             </button>
                         </template>

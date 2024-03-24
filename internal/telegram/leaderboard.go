@@ -21,6 +21,21 @@ func (t *Telegram) sendLeaderboard(ctx context.Context, userId int64) error {
 		logrus.WithError(err).Errorln("couldn't fetch user's scoreboard")
 		return err
 	}
+
+	keyboard := generateInlineButtons(
+		[]telebot.Btn{btnEditDisplayName},
+		[]telebot.Btn{btnLeaderboard},
+		[]telebot.Btn{btnJoinMatchmaking},
+	)
+
+	if len(sInfo.Tops) == 0 {
+		_, err = t.Bot.Send(
+			&telebot.User{ID: userId},
+			"☹️ متاسفانه هنوز کسی  امروز بازی نکرده! اولین بازی رو انجام بده و نفر اول باش.",
+			keyboard,
+		)
+		return nil
+	}
 	ids := lo.Map(sInfo.Tops, func(item scoreboard.Score, _ int) entity.ID {
 		return entity.NewID("account", item.AccountID)
 	})
@@ -41,16 +56,10 @@ func (t *Telegram) sendLeaderboard(ctx context.Context, userId int64) error {
 			return fmt.Sprintf(`رتبه %d - %s : %d`, index+1, tops[index].DisplayName, item.Score)
 		}), "\n"),
 	)
-	selector := &telebot.ReplyMarkup{}
-	var rows []telebot.Row
-	rows = append(rows, selector.Row(btnEditDisplayName))
-	rows = append(rows, selector.Row(btnLeaderboard))
-	rows = append(rows, selector.Row(btnJoinMatchmaking))
-	selector.Inline(rows...)
 	_, err = t.Bot.Send(
 		&telebot.User{ID: userId},
 		msg,
-		selector,
+		keyboard,
 	)
 	return err
 }

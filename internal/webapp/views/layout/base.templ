@@ -90,6 +90,12 @@ templ Base(){
             display: inline-block;
             font-size: 16px;
             border-radius: 8px;
+            transition: .15s;
+        }
+        .tg-button.answered {
+            background: var(--tg-theme-button-text-color);
+            color: var(--tg-theme-button-color) ;
+            opacity: 0.4;
         }
 
         [x-cloak] {
@@ -233,6 +239,7 @@ templ Base(){
             questionTimer: 0,
             timerPercent: 0,
             questionDuration: 0,
+            lastQuestionAnswered:-1,
 
             async initLobby() {
                 if (this.isInit) {
@@ -281,11 +288,13 @@ templ Base(){
                 })
             },
             async answered(answer) {
+                console.log("sending ...")
                 let currentQuestion = this.currentLobby.gameInfo.currentQuestion.index
                 await post("/lobby/" + this.lobbyId + "/answer", {
                     index: currentQuestion,
                     answer: answer,
                 })
+                this.lastQuestionAnswered = currentQuestion
             },
             questionTimerWorker() {
                 setInterval(() => {

@@ -3,6 +3,7 @@ package telegram
 import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/telebot.v3"
+	"kingscomp/internal/entity"
 	"kingscomp/internal/events"
 	"time"
 )
@@ -20,6 +21,7 @@ func (t *Telegram) queue() {
 	})
 
 	t.gs.Queue.Register(events.EventGameClosed, func(info events.EventInfo) {
+		t.App.Account.SetField(t.ctx, entity.NewID("account", info.AccountID), "current_lobby", "")
 		t.Bot.Send(&telebot.User{ID: info.AccountID}, `بازی شما با موفقیت تمام شد. خسته نباشید.`)
 	})
 
