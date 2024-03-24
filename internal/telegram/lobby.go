@@ -68,7 +68,7 @@ loading:
 			took := int(time.Since(s).Seconds())
 			c.Bot().Edit(loadingMessage, fmt.Sprintf(`🎮 درحال پیدا کردن حریف ... منتظر بمانید
 
-🕕 %d ثانیه از %d`, took, int(DefaultMatchmakingTimeout.Seconds())))
+🕕 %d ثانیه از %d`, took, int(DefaultMatchmakingTimeout.Seconds())), generateInlineButtons([]telebot.Btn{btnLeaveMatchmaking}))
 			continue
 		case <-ch:
 			break loading
