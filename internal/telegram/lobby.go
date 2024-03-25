@@ -21,11 +21,11 @@ func (t *Telegram) joinMatchmaking(c telebot.Context) error {
 	myAccount := GetAccount(c)
 
 	if myAccount.CurrentLobby != "" { //todo: show the current game's status
-		return c.Send("در حال حاضر در حال انجام یک بازی هستید", &telebot.ReplyMarkup{RemoveKeyboard: true})
+		return c.Send("همین الآن توی یه بازی هستی!", &telebot.ReplyMarkup{RemoveKeyboard: true})
 	}
 
 	msg, err := t.Input(c, InputConfig{
-		Prompt:         "⏰ هر بازی بین 2 تا 4 دقیقه طول میکشد و در صورت ورود باید اینترنت پایداری داشته باشید.\n\nجستجوی بازی جدید رو شروع کنیم؟",
+		Prompt:         "⏰ هر بازی بین ۴-۲ دقیقه طول می‌کشه و باید اینترنت پایداری داشته باشی.\n\nجستجوی بازی جدید رو شروع کنیم؟",
 		PromptKeyboard: [][]string{{TxtDecline, TxtConfirm}},
 		Validator:      choiceValidator(TxtDecline, TxtConfirm),
 	})
@@ -48,7 +48,7 @@ func (t *Telegram) joinMatchmaking(c telebot.Context) error {
 	ticker := time.NewTicker(DefaultMatchmakingLoadingInterval)
 	loadingMessage, err := c.Bot().Send(
 		c.Sender(),
-		`🎮 درحال پیدا کردن حریف ... منتظر بمانید`,
+		`🎮 درحال پیدا کردن حریف... منتظر باش...`,
 		generateInlineButtons([]telebot.Btn{btnLeaveMatchmaking}),
 	)
 	if err != nil {
@@ -71,7 +71,7 @@ loading:
 				return nil
 			}
 			took := int(time.Since(s).Seconds())
-			c.Bot().Edit(loadingMessage, fmt.Sprintf(`🎮 درحال پیدا کردن حریف ... منتظر بمانید
+			c.Bot().Edit(loadingMessage, fmt.Sprintf(`🎮 درحال پیدا کردن حریف... منتظر باش...
 
 🕕 %d ثانیه از %d`, took, int(DefaultMatchmakingTimeout.Seconds())), generateInlineButtons([]telebot.Btn{btnLeaveMatchmaking}))
 			continue
@@ -87,7 +87,7 @@ loading:
 
 	if err != nil {
 		if errors.Is(err, matchmaking.ErrTimeout) {
-			c.Send(`🕕 به مدت 2 دقیقه دنبال بازی جدیدی گشتیم اما متاسفانه پیدا نشد. میتونید چند دقیقه دیگه دوباره تلاش کنید`)
+			c.Send(`🕕 دو دقیقه دنبال بازی جدید گشتیم، اما متاسفانه پیدا نشد! می‌تونی چند دقیقه دیگه دوباره تلاش کنی.`)
 			return t.myInfo(c)
 		}
 		return err
@@ -116,7 +116,7 @@ func (t *Telegram) currentLobby(c telebot.Context) error {
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			c.Respond(&telebot.CallbackResponse{
-				Text: `این بازی به اتمام رسیده است`,
+				Text: `این بازی تموم شده!`,
 			})
 			c.Bot().Delete(c.Message())
 			myAccount.CurrentLobby = ""
@@ -126,7 +126,7 @@ func (t *Telegram) currentLobby(c telebot.Context) error {
 		return err
 	}
 
-	return c.Send(fmt.Sprintf(`🏁 بازی درحال اجرای شما
+	return c.Send(fmt.Sprintf(`🏁 بازی در حال اجرای شما
 
 بازیکنان شما:
 %s
@@ -156,12 +156,12 @@ func (t *Telegram) resignLobby(c telebot.Context) error {
 	myLobby := myAccount.CurrentLobby
 	if myLobby == "" {
 		c.Respond(&telebot.CallbackResponse{
-			Text: `شما قبلا از این بازی انصراف داده بودید`,
+			Text: `قبلا از این بازی انصراف داده بودی!`,
 		})
 		return t.myInfo(c)
 	}
 	c.Respond(&telebot.CallbackResponse{
-		Text: `✅ با موفقیت از بازی فعلی انصراف دادید`,
+		Text: `✅ با موفقیت از بازی فعلی انصراف دادی.`,
 	})
 	myAccount.CurrentLobby = ""
 	if err := t.App.Account.Save(context.Background(), myAccount); err != nil {
