@@ -31,7 +31,7 @@ func (t *Telegram) sendLeaderboard(ctx context.Context, userId int64) error {
 	if len(sInfo.Tops) == 0 {
 		_, err = t.Bot.Send(
 			&telebot.User{ID: userId},
-			"☹️ متاسفانه هنوز کسی  امروز بازی نکرده! اولین بازی رو انجام بده و نفر اول باش.",
+			"☹️ متاسفانه، امروز هیچ بازی نداشتیم! اولین بازی رو انجام بده و نفر اول باش!",
 			keyboard,
 		)
 		return nil
