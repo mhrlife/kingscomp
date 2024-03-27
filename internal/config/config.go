@@ -35,7 +35,7 @@ func init() {
 func getInt(key string) int {
 	num, err := strconv.Atoi(os.Getenv(key))
 	if err != nil {
-		logrus.WithError(err).WithField("key", key).Fatal("couldn't get env value")
+		logrus.WithError(err).WithField("key", key).Fatal("couldn't convert env value to int")
 	}
 	return num
 }
